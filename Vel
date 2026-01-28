@@ -1,0 +1,90 @@
+<?php
+$conn = mysqli_connect("localhost", "root", "", "cruddatabase");
+$result = mysqli_query($conn, "SELECT * FROM files");
+?>
+
+<h2>Files List</h2>
+<table border="1">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Unique ID</th>
+    <th>File</th>
+</tr>
+
+<?php while ($row = mysqli_fetch_assoc($result)) { ?>
+<tr>
+    <td><?= $row['id'] ?></td>
+    <td><?= $row['name'] ?></td>
+    <td><?= $row['unique_id'] ?></td>
+    <td><a href="<?= $row['file'] ?>" target="_blank">View</a></td>
+</tr>
+<?php } ?>
+</table>
+
+
+------
+
+<table border="1">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Unique ID</th>
+    <th>File</th>
+    <th>Action</th>
+</tr>
+
+<?php while ($row = mysqli_fetch_assoc($result)) { ?>
+<tr>
+    <td><?= $row['id'] ?></td>
+    <td><?= $row['name'] ?></td>
+    <td><?= $row['unique_id'] ?></td>
+
+    <td>
+        <a href="uploads/<?= basename($row['file']) ?>" target="_blank">View</a>
+    </td>
+
+    <td>
+        <a href="edit.php?id=<?= $row['id'] ?>">Edit</a> |
+        <a href="delete.php?id=<?= $row['id'] ?>" 
+           onclick="return confirm('Delete this file?')">Delete</a>
+    </td>
+</tr>
+<?php } ?>
+</table> ------
+-----
+Delete 
+<?php
+$conn = mysqli_connect("localhost", "root", "", "cruddatabase");
+
+$id = $_GET['id'];
+
+$res = mysqli_query($conn, "SELECT file FROM files WHERE id=$id");
+$data = mysqli_fetch_assoc($res);
+
+unlink($data['file']); // delete file from folder
+mysqli_query($conn, "DELETE FROM files WHERE id=$id"); // delete DB record
+
+header("Location: data.php");
+?>
+-------edit
+edit 
+<?php
+$conn = mysqli_connect("localhost", "root", "", "cruddatabase");
+
+$id = $_GET['id'];
+$res = mysqli_query($conn, "SELECT * FROM files WHERE id=$id");
+$row = mysqli_fetch_assoc($res);
+
+if (isset($_POST['update'])) {
+    $name = $_POST['name'];
+    mysqli_query($conn, "UPDATE files SET name='$name' WHERE id=$id");
+    header("Location: data.php");
+}
+?>
+
+<form method="POST">
+    <input type="text" name="name" value="<?= $row['name'] ?>">
+    <button name="update">Update</button>
+</form>
+
