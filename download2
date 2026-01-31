@@ -1,0 +1,20 @@
+<?php
+include "config.php";
+
+$id = $_GET['id'];
+
+$result = mysqli_query($conn, "SELECT file_name FROM files WHERE id=$id");
+$row = mysqli_fetch_assoc($result);
+
+echo "DB File Name: " . $row['file_name'] . "<br>";
+
+$file = "uploads/" . $row['file_name'];
+
+echo "Full Path: " . $file . "<br>";
+
+if(file_exists($file)){
+    echo "File exists ✅";
+} else {
+    echo "File NOT found ❌";
+}
+?>
