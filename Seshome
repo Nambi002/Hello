@@ -1,0 +1,58 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// 🔥 1 MINUTE SESSION TIMEOUT
+$timeout = 60; 
+
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout) {
+    session_unset();
+    session_destroy();
+    header("Location: login.php?expired=1");
+    exit();
+}
+
+$_SESSION['LAST_ACTIVITY'] = time(); // reset activity time
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="dashboard">
+    <h1>Welcome, <?php echo $_SESSION['username']; ?>!</h1>
+    <h3>Dashboard</h3>
+
+    <div class="timer">
+        ⏳ Session expires in <span id="countdown">60</span> seconds
+    </div>
+
+    <a href="logout.php" class="logout-btn">Log Out</a>
+
+    <p>Secure Session Management | Keep your data safe</p>
+</div>
+
+<script>
+let timeLeft = 60;
+let timer = document.getElementById("countdown");
+
+setInterval(function () {
+    timeLeft--;
+    timer.textContent = timeLeft;
+
+    if (timeLeft <= 0) {
+        window.location.href = "logout.php";
+    }
+}, 1000);
+</script>
+
+</body>
+</html>
