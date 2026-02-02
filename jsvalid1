@@ -1,0 +1,39 @@
+<script>
+function validateForm() {
+
+    let name = document.forms["uploadForm"]["name"].value.trim();
+    let fileInput = document.forms["uploadForm"]["file"];
+    let file = fileInput.files[0];
+
+    // NAME VALIDATION
+    let nameRegex = /^[A-Za-z ]+$/;
+    if (!nameRegex.test(name)) {
+        alert("Name must contain letters only");
+        return false;
+    }
+
+    // FILE VALIDATION (only if file selected)
+    if (file) {
+
+        let allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+        let maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!allowedTypes.includes(file.type)) {
+            alert("Only JPG, PNG, PDF files allowed");
+            return false;
+        }
+
+        if (file.size > maxSize) {
+            alert("File size must be less than 5MB");
+            return false;
+        }
+    }
+
+    return true; // allow submit
+}
+</script>
+
+
+
+<input type="text" name="name" id="name" required>
+<input type="file" name="file" id="file">

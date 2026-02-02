@@ -1,0 +1,79 @@
+<script>
+function validateForm(){
+
+    let name = document.getElementById("name").value.trim();
+    let fileInput = document.getElementById("file");
+    let file = fileInput.files[0];
+
+    let nameError = document.getElementById("nameError");
+    let fileError = document.getElementById("fileError");
+
+    nameError.textContent = "";
+    fileError.textContent = "";
+
+    let isValid = true;
+
+    // Name validation (letters only)
+    let namePattern = /^[A-Za-z ]+$/;
+    if(name === ""){
+        nameError.textContent = "Name is required";
+        isValid = false;
+    }
+    else if(!namePattern.test(name)){
+        nameError.textContent = "Only letters allowed";
+        isValid = false;
+    }
+
+    // File validation
+    if(file){
+
+        let maxSize = 5 * 1024 * 1024; // 5MB
+        if(file.size > maxSize){
+            fileError.textContent = "File must be less than 5MB";
+            isValid = false;
+        }
+
+        let allowedTypes = ["application/pdf","image/jpeg","image/png"];
+        if(!allowedTypes.includes(file.type)){
+            fileError.textContent = "Only PDF, JPG, PNG allowed";
+            isValid = false;
+        }
+    }
+
+    return isValid;
+}
+</script>
+
+
+<form method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+
+    <label>Name</label>
+    <input type="text" name="name" id="name">
+    <small id="nameError" class="error"></small>
+
+    <br><br>
+
+    <label>Upload File</label>
+    <input type="file" name="file" id="file">
+    <small id="fileError" class="error"></small>
+
+    <br><br>
+
+    <button type="submit">Submit</button>
+</form>
+
+
+
+
+<style>
+.error{
+    color:red;
+    font-size:14px;
+}
+input{
+    display:block;
+    padding:8px;
+    margin-top:5px;
+}
+</style>
+
