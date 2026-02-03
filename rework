@@ -1,0 +1,103 @@
+index.php 
+
+<form action="upload.php" method="POST" enctype="multipart/form-data">
+    <input type="text" name="username" placeholder="Enter Username" required>
+    <input type="file" name="myfile" required>
+    <button type="submit" name="upload">Upload</button>
+</form>
+
+
+upload.php
+
+include "db.php";
+
+if(isset($_POST['upload'])){
+    $username = $_POST['username'];
+    $filename = $_FILES['myfile']['name'];
+    $tempname = $_FILES['myfile']['tmp_name'];
+    $folder = "uploads/".$filename;
+
+    move_uploaded_file($tempname, $folder);
+
+    mysqli_query($conn, "INSERT INTO files (username, file_name) VALUES ('$username','$filename')");
+
+    header("Location: view.php");
+}
+
+
+view.php
+
+<tr>
+    <th>ID</th>
+    <th>User Name</th>
+    <th>File</th>
+    <th>Action</th>
+</tr>
+
+<?php
+$result = mysqli_query($conn, "SELECT * FROM files");
+
+while($row = mysqli_fetch_assoc($result)){
+?>
+<tr>
+    <td><?php echo $row['id']; ?></td>
+    <td><?php echo $row['username']; ?></td>
+    <td><?php echo $row['file_name']; ?></td>
+    <td>
+        <a href="uploads/<?php echo $row['file_name']; ?>" download>Download</a> |
+        <a href="edit.php?id=<?php echo $row['id']; ?>">Edit</a>
+    </td>
+</tr>
+<?php } ?>
+
+
+edit.php
+
+include "db.php";
+
+$id = $_GET['id'];
+$data = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM files WHERE id=$id"));
+?>
+
+<h2>Edit Details</h2>
+
+<form action="update.php" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="id" value="<?php echo $data['id']; ?>">
+    <input type="hidden" name="old_file" value="<?php echo $data['file_name']; ?>">
+
+    <label>Previous Username:</label>
+    <input type="text" name="username" value="<?php echo $data['username']; ?>" required>
+
+    <p>Previous File: <b><?php echo $data['file_name']; ?></b></p>
+
+    <input type="file" name="newfile">
+    <button type="submit" name="update">Update</button>
+</form>
+
+
+update.php
+
+include "db.php";
+
+if(isset($_POST['update'])){
+
+    $id = $_POST['id'];
+    $username = $_POST['username'];
+    $oldfile = $_POST['old_file'];
+
+    if($_FILES['newfile']['name'] != ""){
+
+        $newname = $_FILES['newfile']['name'];
+        $tempname = $_FILES['newfile']['tmp_name'];
+        $folder = "uploads/".$newname;
+
+        unlink("uploads/".$oldfile);
+        move_uploaded_file($tempname, $folder);
+
+        mysqli_query($conn, "UPDATE files SET username='$username', file_name='$newname' WHERE id=$id");
+    } else {
+        mysqli_query($conn, "UPDATE files SET username='$username' WHERE id=$id");
+    }
+
+    header("Location: view.php");
+}
