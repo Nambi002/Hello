@@ -1,0 +1,123 @@
+db 
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50),
+    password VARCHAR(50)
+);
+
+INSERT INTO users (username,password) VALUES ('sekar','123');
+
+
+db.php
+
+<?php
+$conn = mysqli_connect("localhost","root","","sessiondb");
+if(!$conn){ die("DB Error"); }
+?>
+
+
+login
+
+<?php
+session_start();
+include "db.php";
+
+if(isset($_POST['login'])){
+    $username = $_POST['username'];
+    $password = $_POST['password'];
+
+    $q = mysqli_query($conn,"SELECT * FROM users WHERE username='$username' AND password='$password'");
+    
+    if(mysqli_num_rows($q) > 0){
+        $_SESSION['user'] = $username;
+        $_SESSION['start'] = time();
+        $_SESSION['expire'] = $_SESSION['start'] + (2 * 60); // 2 minutes
+        header("Location: home.php");
+    } else {
+        $error = "Invalid Login!";
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Secure Login</title>
+<style>
+body{font-family:sans-serif;background:linear-gradient(45deg,#5f6dff,#8e44ad);display:flex;justify-content:center;align-items:center;height:100vh;}
+.box{background:white;padding:40px;border-radius:15px;width:320px;text-align:center;}
+input{width:100%;padding:10px;margin:10px 0;border-radius:8px;border:1px solid #ccc;}
+button{width:100%;padding:10px;background:#6c5ce7;color:white;border:none;border-radius:8px;}
+.error{color:red;}
+</style>
+</head>
+<body>
+<div class="box">
+<h2>Secure Login</h2>
+<form method="POST">
+<input type="text" name="username" placeholder="Username" required>
+<input type="password" name="password" placeholder="Password" required>
+<button name="login">Sign In</button>
+</form>
+<p class="error"><?php if(isset($error)) echo $error; ?></p>
+</div>
+</body>
+</html>
+
+
+home 
+
+<?php
+session_start();
+
+if(!isset($_SESSION['user'])){
+    header("Location:index.php");
+    exit();
+}
+
+$now = time();
+
+if($now > $_SESSION['expire']){
+    session_destroy();
+    echo "<script>alert('Session Expired');window.location='index.php';</script>";
+}
+
+$remaining = $_SESSION['expire'] - $now;
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard</title>
+<style>
+body{background:linear-gradient(45deg,#5f6dff,#8e44ad);font-family:sans-serif;color:white;text-align:center;padding-top:100px;}
+.card{background:#6c5ce7;padding:40px;border-radius:15px;width:300px;margin:auto;}
+button{background:red;color:white;padding:10px 20px;border:none;border-radius:8px;}
+</style>
+<script>
+let timeLeft = <?php echo $remaining; ?>;
+setInterval(()=>{
+    if(timeLeft<=0) location.reload();
+    document.getElementById("timer").innerHTML="Session expires in "+timeLeft+" seconds";
+    timeLeft--;
+},1000);
+</script>
+</head>
+<body>
+<div class="card">
+<h2>Welcome, <?php echo $_SESSION['user']; ?>!</h2>
+<p id="timer"></p>
+<a href="logout.php"><button>Log Out</button></a>
+</div>
+</body>
+</html>
+
+
+logout 
+
+<?php
+session_start();
+session_destroy();
+header("Location:index.php");
+?>
