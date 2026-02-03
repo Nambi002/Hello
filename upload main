@@ -1,0 +1,30 @@
+<?php
+include "db.php";
+
+if(isset($_POST['update'])){
+
+    $id = $_POST['id'];
+    $oldfile = $_POST['old_file'];
+
+    if($_FILES['newfile']['name'] != ""){
+
+        $newname = $_FILES['newfile']['name'];
+        $tempname = $_FILES['newfile']['tmp_name'];
+        $folder = "uploads/".$newname;
+
+        // Delete old file
+        unlink("uploads/".$oldfile);
+
+        // Upload new file
+        move_uploaded_file($tempname, $folder);
+
+        // Update DB
+        mysqli_query($conn, "UPDATE files SET file_name='$newname' WHERE id=$id");
+    }
+
+    header("Location: view.php");
+}
+?>
+
+
+<form action="upload.php" method="POST" enctype="multipart/form-data">
