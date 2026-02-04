@@ -1,3 +1,69 @@
+.input-box {
+    position: relative;
+    margin-bottom: 18px;
+}
+
+.input-box input {
+    width: 100%;
+    padding: 12px 40px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    outline: none;
+    font-size: 14px;
+}
+
+.icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+}
+function togglePassword() {
+    const passField = document.getElementById("password");
+    const icon = document.querySelector(".toggle");
+
+    if (passField.type === "password") {
+        passField.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        passField.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+<div class="input-box">
+        <i class="fa fa-user icon"></i>
+        <input type="text" placeholder="Enter your username" required>
+    </div>
+
+    <!-- Password -->
+    <div class="input-box">
+        <i class="fa fa-key icon"></i>
+        <input type="password" id="password" placeholder="Enter your password" required>
+        <i class="fa fa-eye toggle" onclick="togglePassword()"></i>
+    </div>
+
+
+
+
+
+
+
+
+
+
+
 ?php
 include "config.php";
 $msg="";
