@@ -1,0 +1,98 @@
+<?php
+session_start();
+
+// Initial balance (only first time)
+if(!isset($_SESSION['balance'])) {
+    $_SESSION['balance'] = 10000; // starting amount
+}
+
+$message = "";
+
+// Deposit
+if(isset($_POST['deposit'])) {
+    $amount = $_POST['amount'];
+    $_SESSION['balance'] += $amount;
+    $message = "₹$amount Deposited Successfully!";
+}
+
+// Withdraw
+if(isset($_POST['withdraw'])) {
+    $amount = $_POST['amount'];
+
+    if($amount > $_SESSION['balance']) {
+        $message = "Insufficient Balance!";
+    } else {
+        $_SESSION['balance'] -= $amount;
+        $message = "₹$amount Withdrawn Successfully!";
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mini Bank System</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: linear-gradient(to right, #11998e, #38ef7d);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .bank-box {
+            background: white;
+            padding: 25px;
+            width: 320px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        input {
+            width: 90%;
+            padding: 8px;
+            margin: 8px 0;
+        }
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .deposit { background: green; }
+        .withdraw { background: red; }
+        .balance {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: blue;
+        }
+        .msg {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="bank-box">
+    <h2>🏦 My Bank Account</h2>
+
+    <div class="balance">
+        Balance: ₹ <?php echo number_format($_SESSION['balance'], 2); ?>
+    </div>
+
+    <form method="POST">
+        <input type="number" name="amount" placeholder="Enter amount" required>
+        <br>
+        <button class="deposit" name="deposit">Deposit</button>
+        <button class="withdraw" name="withdraw">Withdraw</button>
+    </form>
+
+    <div class="msg"><?php echo $message; ?></div>
+</div>
+
+</body>
+</html>
