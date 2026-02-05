@@ -1,0 +1,369 @@
+🧠 Class in PHP
+
+A class is a blueprint for creating objects
+
+It defines properties (variables) and methods (functions)
+
+Used in Object-Oriented Programming (OOP)
+
+Helps in code reusability
+
+Improves program structure
+
+Supports encapsulation and abstraction
+
+Created using the class keyword
+
+
+-------
+
+🧩 Object in PHP
+
+An object is an instance of a class
+
+It is used to access properties and methods of a class
+
+Objects represent real-world entities
+
+Created using the new keyword
+
+Each object has its own data
+
+Objects help in implementing OOP concepts
+
+Used to call class functions
+
+----
+🔒 Encapsulation in PHP
+
+Encapsulation means binding data and methods into a single unit (class)
+
+It is used to hide internal details of the class
+
+Data is protected using access modifiers
+
+Access modifiers are private, protected, public
+
+Prevents direct access to variables
+
+Data can be accessed using getter and setter methods
+
+Improves security and data integrity
+
+-------
+
+🧬 Inheritance in PHP
+
+Inheritance allows one class to use properties and methods of another class
+
+The main class is called the parent (base) class
+
+The new class is called the child (derived) class
+
+It promotes code reusability
+
+Avoids duplication of code
+
+Implemented using the extends keyword
+
+Child class can add its own features
+
+-----
+
+Types of Inheritance in PHP
+
+Single Inheritance – One child class inherits one parent class
+
+Multilevel Inheritance – A class inherits from a child class (grandparent → parent → child)
+
+Hierarchical Inheritance – Multiple child classes inherit from one parent
+
+Multiple Inheritance – Not supported directly in PHP (done using interfaces/traits)
+
+Inheritance is implemented using the extends keyword
+
+Helps in code reusability
+
+Reduces code duplication
+
+----
+
+🎭 Abstraction in PHP
+
+Abstraction means hiding implementation details and showing only essential features
+
+It focuses on what to do, not how it works
+
+Achieved using abstract classes or interfaces
+
+Abstract class can have both abstract and normal methods
+
+Abstract methods must be implemented in child class
+
+Cannot create object of an abstract class
+
+Improves security and reduces complexity
+
+-------
+🔥
+
+🔄 Polymorphism in PHP
+
+Polymorphism means one method, different behavior
+
+Same function name can work in different ways
+
+Achieved through method overriding
+
+Happens when child class redefines parent method
+
+Supports flexibility in programs
+
+Reduces code complexity
+
+Helps in implementing dynamic behavior
+--------
+
+🧠 OOP (Object-Oriented Programming) in PHP
+
+OOP is a programming method based on classes and objects
+
+It helps organize code in a structured way
+
+Improves code reusability
+
+Makes programs easier to maintain
+
+Focuses on real-world entities
+
+Supports data security
+
+Reduces code duplication
+
+Used in large web applications
+
+---------
+
+🧩 Traits in PHP
+
+Traits are used to reuse code in multiple classes
+
+They solve the problem of multiple inheritance in PHP
+
+A trait can contain methods and properties
+
+Defined using the trait keyword
+
+Included in a class using the use keyword
+
+Helps avoid code duplication
+
+Improves code modularity
+---------
+
+✨ Magic Methods in PHP
+
+Magic methods are special predefined functions in PHP
+
+Their names start with double underscores __
+
+They are automatically called when certain actions happen
+
+Used in Object-Oriented Programming
+
+Help control object behavior
+
+Used for constructor, destructor, overloading, etc.
+
+Improve flexibility of classes
+
+
+-------
+
+🏗 Constructor in PHP (__construct)
+
+A constructor is a special method in a class
+
+It runs automatically when an object is created
+
+Used to initialize class properties
+
+Helps set default values
+
+Its name is __construct()
+
+Can accept parameters
+
+Improves object setup process
+
+----
+
+.
+
+💥 Destructor in PHP (__destruct)
+
+A destructor is a special method in a class
+
+It runs automatically when an object is destroyed
+
+Used to perform cleanup tasks
+
+Helps close database connections
+
+Used to free resources
+
+Its name is __destruct()
+
+Called at the end of script execution
+
+--------
+
+JOIN in SQL
+
+JOIN is used to combine data from two or more tables
+
+Works using a common column (usually primary & foreign key)
+
+Helps fetch related data in one query
+
+Used in database-driven applications
+
+Improves data retrieval
+
+Essential in relational databases
+
+
+--------
+
+
+🐘 PHP (Hypertext Preprocessor)
+
+Server-side scripting language
+
+Used to create dynamic web pages
+
+Runs on server, output shown in browser
+
+Open-source and free
+
+Supports databases like MySQL
+
+Can be embedded in HTML
+
+Platform independent
+
+⭐ Features of PHP
+
+Open-source
+
+Easy to learn
+
+Fast performance
+
+Supports multiple databases
+
+Platform independent
+
+Secure for web apps
+
+Supports OOP
+
+🍪 Cookies
+
+Stored in user’s browser
+
+Saves user information
+
+Used for login and preferences
+
+Has expiry time
+
+Small amount of data
+
+Created using setcookie()
+
+🔐 Session
+
+Stores data on server
+
+Maintains user login state
+
+More secure than cookies
+
+Starts with session_start()
+
+Data accessed using $_SESSION
+
+Ends when browser closes or session destroyed
+
+🧠 OOPS Concepts
+
+Encapsulation – binding data and methods
+
+Abstraction – hiding internal details
+
+Inheritance – one class uses another
+
+Polymorphism – same method, different behavior
+
+Class & Object – blueprint and instance
+
+📤 GET
+
+Data sent through URL
+
+Less secure
+
+Limited data size
+
+Used for search requests
+
+Visible in browser address bar
+
+📥 POST
+
+Data sent in background
+
+More secure
+
+No size limit
+
+Used for login/forms
+
+Not visible in URL
+
+🖨 echo
+
+Displays output
+
+Faster than print
+
+Can print multiple values
+
+No return value
+
+🖨 print
+
+Displays output
+
+Slower than echo
+
+Returns value 1
+
+Prints one argument
+
+🖨 print_r
+
+Prints arrays and objects
+
+Human-readable format
+
+Used for debugging
+
+🖨 var_dump
+
+Shows data type and value
+
+Displays string length
+
+Used for debugging complex variables
