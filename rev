@@ -1,6 +1,90 @@
 <?php
 session_start();
 
+if(!isset($_SESSION['balance'])){
+    $_SESSION['balance'] = 0;
+}
+
+$min_balance = 500;
+$message = "";
+
+if(isset($_POST['deposit'])){
+    $amount = (int)$_POST['amount'];
+
+    if($amount > 0){
+        $_SESSION['balance'] += $amount;
+        $_SESSION['msg'] = "₹$amount Deposited Successfully!";
+    }
+
+    header("Location: ".$_SERVER['PHP_SELF']); // ⭐ redirect
+    exit();
+}
+
+if(isset($_POST['withdraw'])){
+    $amount = (int)$_POST['amount'];
+    $balance = $_SESSION['balance'];
+    $available = $balance - $min_balance;
+
+    if($amount > 0 && $amount <= $available){
+        $_SESSION['balance'] -= $amount;
+        $_SESSION['msg'] = "₹$amount Withdrawn Successfully!";
+    } else {
+        $_SESSION['msg'] = "Insufficient balance! You can withdraw only ₹$available";
+    }
+
+    header("Location: ".$_SERVER['PHP_SELF']); // ⭐ redirect
+    exit();
+}
+
+$balance = $_SESSION['balance'];
+
+if(isset($_SESSION['msg'])){
+    $message = $_SESSION['msg'];
+    unset($_SESSION['msg']); // show once only
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Wallet</title>
+</head>
+<body style="text-align:center; margin-top:80px; font-family:Arial;">
+
+<h2>Wallet Balance: ₹<?php echo $balance; ?></h2>
+
+<form method="post">
+    <input type="number" name="amount" placeholder="Enter Amount" required>
+    <br><br>
+    <button name="deposit">Deposit</button>
+    <button name="withdraw">Withdraw</button>
+</form>
+
+<h3 style="color:green;"><?php echo $message; ?></h3>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------
+
+<?php
+session_start();
+
 // Initial balance (only first time)
 if(!isset($_SESSION['balance'])) {
     $_SESSION['balance'] = 10000; // starting amount
