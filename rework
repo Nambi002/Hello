@@ -1,3 +1,86 @@
+<?php
+session_start();
+
+$result = "";
+$error = "";
+
+$rate = 83.2; // USD to INR rate
+
+// Handle Form Submit
+if($_SERVER["REQUEST_METHOD"] == "POST"){
+
+    $usd = trim($_POST['usd']);
+
+    if($usd == ""){
+        $_SESSION['error'] = "Please enter amount";
+    }
+    elseif(!is_numeric($usd)){
+        $_SESSION['error'] = "Only numbers allowed";
+    }
+    elseif($usd <= 0){
+        $_SESSION['error'] = "Amount must be greater than 0";
+    }
+    else{
+        $inr = $usd * $rate;
+        $_SESSION['result'] = "$usd USD = ₹" . number_format($inr, 2) . " INR";
+    }
+
+    // 🔥 IMPORTANT — Stops reload repeat
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
+}
+
+// Show messages once
+if(isset($_SESSION['result'])){
+    $result = $_SESSION['result'];
+    unset($_SESSION['result']);
+}
+
+if(isset($_SESSION['error'])){
+    $error = $_SESSION['error'];
+    unset($_SESSION['error']);
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Currency Converter</title>
+</head>
+<body style="text-align:center; margin-top:80px; font-family:Arial;">
+
+<h2>USD → INR Converter</h2>
+
+<form method="post">
+    <input type="text" name="usd" placeholder="Enter USD Amount">
+    <br><br>
+    <button type="submit">Convert</button>
+</form>
+
+<?php if($result != "") { ?>
+    <h3 style="color:green;"><?php echo $result; ?></h3>
+<?php } ?>
+
+<?php if($error != "") { ?>
+    <h3 style="color:red;"><?php echo $error; ?></h3>
+<?php } ?>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------------------
+
+
 index.php 
 
 <form action="upload.php" method="POST" enctype="multipart/form-data">
