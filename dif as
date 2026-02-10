@@ -1,0 +1,98 @@
+🎯 GOAL
+Original	Alias (Used Everywhere)
+username	name
+phone_number	mobile
+
+We will apply every type of alias PHP offers to this.
+
+🟢 1️⃣ DATA MAPPING ALIAS (Application Level)
+
+Convert field names once → use everywhere.
+
+process.php
+session_start();
+
+$_SESSION['name']   = $_POST['username'];      // alias
+$_SESSION['mobile'] = $_POST['phone_number'];  // alias
+
+
+✔ This is logical alias
+✔ Used in real projects
+
+🟢 2️⃣ VARIABLE REFERENCE ALIAS (&)
+
+Make alias variables pointing to session data.
+
+home.php
+session_start();
+
+$name   = &$_SESSION['name'];     // alias reference
+$mobile = &$_SESSION['mobile'];
+
+$name = "Updated Nambi";  // Changes session too
+
+
+Now all pages see updated value.
+
+🟢 3️⃣ ARRAY KEY ALIAS
+
+Create a mapping array.
+
+$fieldAlias = [
+    'username' => 'name',
+    'phone_number' => 'mobile'
+];
+
+$user[$fieldAlias['username']] = $_POST['username'];
+$user[$fieldAlias['phone_number']] = $_POST['phone_number'];
+
+
+Change alias in one place → whole project updates.
+
+🟢 4️⃣ OBJECT PROPERTY ALIAS
+
+Use object to standardize names.
+
+class User {
+    public $name;
+    public $mobile;
+
+    function __construct($data) {
+        $this->name   = $data['username'];      // alias
+        $this->mobile = $data['phone_number'];  // alias
+    }
+}
+
+$user = new User($_POST);
+
+🟢 5️⃣ FUNCTION NAME ALIAS
+
+Create wrapper function.
+
+function getName() {
+    return $_SESSION['name'];
+}
+
+function getMobile() {
+    return $_SESSION['mobile'];
+}
+
+
+Now pages use:
+
+echo getName();
+echo getMobile();
+
+🟢 6️⃣ DATABASE ALIAS
+SELECT username AS name, phone_number AS mobile FROM users;
+
+
+PHP side:
+
+echo $row['name'];
+echo $row['mobile'];
+
+🟢 7️⃣ NAMESPACE / CLASS ALIAS
+use App\Models\User as UserModel;
+
+$user = new UserModel($_POST);
