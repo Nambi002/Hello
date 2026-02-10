@@ -3218,4 +3218,296 @@ Syntax: @import url("style.css");
 
 Slower than <link>.
 
-Used for modular CSS.
+Used for modular CSS.   
+
+
+🔹 Views in SQL
+
+A view is a virtual table.
+
+Created using CREATE VIEW.
+
+Does not store data physically.
+
+Shows data from one or more tables.
+
+Used for security and abstraction.
+
+🔹 Cursor in SQL
+
+Cursor processes rows one by one.
+
+Used when row-by-row operation needed.
+
+Declared using DECLARE CURSOR.
+
+Slower than set-based queries.
+
+Used in stored procedures.
+
+🔹 Primary Key
+
+Uniquely identifies each row.
+
+Cannot contain NULL.
+
+Only one primary key per table.
+
+Can be single or composite.
+
+Automatically indexed.
+
+🔹 Foreign Key
+
+Links two tables.
+
+Refers to primary key of another table.
+
+Maintains referential integrity.
+
+Prevents invalid data.
+
+Can allow NULL (if optional).
+
+🔹 Stored Procedure (SP)
+
+Precompiled SQL code block.
+
+Improves performance.
+
+Reusable logic.
+
+Can accept parameters.
+
+Enhances security.
+
+🔹 Trigger
+
+Automatically executes on table event.
+
+Events: INSERT, UPDATE, DELETE.
+
+Used for auditing.
+
+Maintains data integrity.
+
+Can be BEFORE or AFTER trigger.
+
+🔹 Transaction
+
+Group of SQL operations.
+
+Must follow ACID properties.
+
+Commands: BEGIN, COMMIT, ROLLBACK.
+
+Ensures data consistency.
+
+Used in banking systems.
+
+🔹 Joins
+
+Combine data from multiple tables.
+
+Based on related columns.
+
+Types: INNER, LEFT, RIGHT, FULL.
+
+Improves relational data retrieval.
+
+Essential for database queries.
+
+🔹 CROSS APPLY
+
+Used with table-valued functions.
+
+Works like INNER JOIN.
+
+Executes function per row.
+
+Filters rows based on function result.
+
+Mainly used in SQL Server.
+
+🔥 You’re covering backend + frontend + DB — solid prep.
+
+Want SQL interview queries practice next?
+
+all joins .  all constrainrts
+
+Let’s lock in SQL Joins and Constraints — interview-ready bullets 🔥
+
+🔷 ALL SQL JOINS
+🔹 1. INNER JOIN
+
+Returns matching rows from both tables.
+
+Excludes non-matching records.
+
+Most commonly used join.
+
+Based on a condition (ON).
+
+Used when data must exist in both tables.
+
+🔹 2. LEFT JOIN (LEFT OUTER)
+
+Returns all rows from left table.
+
+Matching rows from right table.
+
+Non-matching right values → NULL.
+
+Used when left table data is mandatory.
+
+Helps find missing matches.
+
+🔹 3. RIGHT JOIN (RIGHT OUTER)
+
+Returns all rows from right table.
+
+Matching rows from left table.
+
+Non-matching left values → NULL.
+
+Opposite of LEFT JOIN.
+
+Less commonly used.
+
+🔹 4. FULL JOIN (FULL OUTER)
+
+Returns all rows from both tables.
+
+Matching rows combined.
+
+Non-matching rows filled with NULL.
+
+Useful for comparison reports.
+
+Shows complete data.
+
+🔹 5. CROSS JOIN
+
+Returns Cartesian product.
+
+Every row of table A with every row of B.
+
+No join condition required.
+
+Produces large result sets.
+
+Rarely used in real projects.
+
+🔹 6. SELF JOIN
+
+Table joined with itself.
+
+Uses aliases.
+
+Used for hierarchical data.
+
+Example: employee–manager relation.
+
+Can be inner or outer join.
+
+🔹 7. NATURAL JOIN
+
+Automatically joins based on same column names.
+
+No ON clause needed.
+
+Can cause unexpected results.
+
+Not widely used.
+
+Simpler but risky.
+
+🔷 ALL SQL CONSTRAINTS
+🔹 1. NOT NULL
+
+Prevents NULL values.
+
+Ensures column always has data.
+
+Used for mandatory fields.
+
+Improves data quality.
+
+Applied during table creation.
+
+🔹 2. UNIQUE
+
+Ensures all values are different.
+
+No duplicate entries.
+
+Can allow one NULL (DB dependent).
+
+Can be multiple per table.
+
+Used for email, username.
+
+🔹 3. PRIMARY KEY
+
+Uniquely identifies rows.
+
+Combines NOT NULL + UNIQUE.
+
+Only one per table.
+
+Creates index automatically.
+
+Cannot contain NULL.
+
+🔹 4. FOREIGN KEY
+
+Links parent and child tables.
+
+Maintains referential integrity.
+
+Prevents invalid data.
+
+Supports ON DELETE/UPDATE rules.
+
+Can allow NULL.
+
+🔹 5. CHECK
+
+Restricts value range.
+
+Validates condition.
+
+Example: age > 18.
+
+Improves data accuracy.
+
+Works at column or table level.
+
+🔹 6. DEFAULT
+
+Assigns default value.
+
+Used if no value provided.
+
+Reduces NULLs.
+
+Common for status fields.
+
+Defined during creation.
+
+🔹 7. INDEX (Not exactly constraint but related)
+
+Improves query performance.
+
+Speeds up data retrieval.
+
+Can be unique or non-unique.
+
+Uses extra storage.
+
+Automatically created for PK.
+
+🎯 Interview One-Liner:
+“Joins combine tables, constraints protect data integrity.”
+
+Want Group By / Having / Subquery / Normalization next?
