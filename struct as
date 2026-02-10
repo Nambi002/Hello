@@ -1,0 +1,121 @@
+📁 Project Structure
+/project
+   ├── index.php        (Form page)
+   ├── process.php      (Convert + store)
+   ├── home.php         (Page 1)
+   ├── profile.php      (Page 2)
+   └── logout.php
+
+🔹 1. index.php (Main Form Page)
+<?php session_start(); ?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Form</title>
+</head>
+<body>
+
+<h2>Enter Details</h2>
+
+<form action="process.php" method="POST">
+    Username: <input type="text" name="username" required><br><br>
+    Phone Number: <input type="text" name="phone_number" required><br><br>
+    <button type="submit">Submit</button>
+</form>
+
+</body>
+</html>
+
+🔹 2. process.php (Convert Names Here 🔥)
+<?php
+session_start();
+
+// Getting original fields
+$username = $_POST['username'];
+$phone    = $_POST['phone_number'];
+
+// Converting field names
+$_SESSION['name']   = $username;   // username → name
+$_SESSION['mobile'] = $phone;      // phone_number → mobile
+
+header("Location: home.php");
+exit();
+?>
+
+🔹 3. home.php (Reflected Here)
+<?php
+session_start();
+if (!isset($_SESSION['name'])) {
+    header("Location: index.php");
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+</head>
+<body>
+
+<h2>Home Page</h2>
+
+Name: <?php echo $_SESSION['name']; ?><br>
+Mobile: <?php echo $_SESSION['mobile']; ?><br><br>
+
+<a href="profile.php">Go to Profile</a><br>
+<a href="logout.php">Logout</a>
+
+</body>
+</html>
+
+🔹 4. profile.php (Also Reflected Automatically)
+<?php
+session_start();
+if (!isset($_SESSION['name'])) {
+    header("Location: index.php");
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile</title>
+</head>
+<body>
+
+<h2>Profile Page</h2>
+
+Welcome, <?php echo $_SESSION['name']; ?>!<br>
+Your Mobile Number is <?php echo $_SESSION['mobile']; ?><br><br>
+
+<a href="home.php">Back to Home</a>
+
+</body>
+</html>
+
+🔹 5. logout.php
+<?php
+session_start();
+session_destroy();
+header("Location: index.php");
+exit();
+?>
+
+🎯 How This Works
+Original Field	Converted Field	Used Everywhere
+username	name	$_SESSION['name']
+phone_number	mobile	$_SESSION['mobile']
+
+So if tomorrow you change:
+
+$_SESSION['full_name']
+$_SESSION['contact_no']
+
+
+Only process.php needs update — all pages reflect 💥
+
+🧠 Interview One-Line Answer
+
+We store form data in session variables with standardized names, so changes in field naming reflect across all pages without modifying each file.
