@@ -1,0 +1,114 @@
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    phone VARCHAR(15),
+    created_at DATE
+);
+
+index.php 
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX Date Filter</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+
+<h2>User Records</h2>
+
+<!-- 🔍 Filters -->
+<input type="text" id="search" placeholder="Search name or phone">
+Start Date: <input type="date" id="start_date">
+End Date: <input type="date" id="end_date">
+
+<br><br>
+
+<!-- 📋 Table -->
+<table border="1" width="100%">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Phone</th>
+            <th>Created At</th>
+        </tr>
+    </thead>
+    <tbody id="table_data">
+        <!-- Data comes here -->
+    </tbody>
+</table>
+
+<script>
+$(document).ready(function(){
+
+    // Load data initially
+    loadData();
+
+    // Trigger when typing or date change
+    $("#search, #start_date, #end_date").on("keyup change", function(){
+        loadData();
+    });
+
+    function loadData() {
+        var search = $("#search").val();
+        var start_date = $("#start_date").val();
+        var end_date = $("#end_date").val();
+
+        $.ajax({
+            url: "fetch.php",
+            type: "POST",
+            data: {
+                search: search,
+                start_date: start_date,
+                end_date: end_date
+            },
+            success: function(data){
+                $("#table_data").html(data);
+            }
+        });
+    }
+
+});
+</script>
+
+</body>
+</html>
+
+
+fetch.php
+<?php
+$conn = mysqli_connect("localhost", "root", "", "test_db");
+
+$search = $_POST['search'] ?? '';
+$start_date = $_POST['start_date'] ?? '';
+$end_date = $_POST['end_date'] ?? '';
+
+$sql = "SELECT * FROM users WHERE 1";
+
+// 🔎 Search filter
+if (!empty($search)) {
+    $sql .= " AND (name LIKE '%$search%' OR phone LIKE '%$search%')";
+}
+
+// 📅 Date range filter
+if (!empty($start_date) && !empty($end_date)) {
+    $sql .= " AND created_at BETWEEN '$start_date' AND '$end_date'";
+}
+
+$result = mysqli_query($conn, $sql);
+
+if(mysqli_num_rows($result) > 0){
+    while($row = mysqli_fetch_assoc($result)){
+        echo "<tr>
+                <td>{$row['name']}</td>
+                <td>{$row['age']}</td>
+                <td>{$row['phone']}</td>
+                <td>{$row['created_at']}</td>
+              </tr>";
+    }
+} else {
+    echo "<tr><td colspan='4'>No data found</td></tr>";
+}
+?>
