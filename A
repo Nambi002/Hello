@@ -1,0 +1,207 @@
+[
+  {
+    "id": 1,
+    "name": "Rahul",
+    "email": "rahul@gmail.com",
+    "mobile": "9876543210",
+    "city": "Chennai",
+    "date": "2026-02-01"
+  },
+  {
+    "id": 2,
+    "name": "Priya",
+    "email": "priya@gmail.com",
+    "mobile": "8765432109",
+    "city": "Coimbatore",
+    "date": "2026-02-05"
+  },
+  {
+    "id": 3,
+    "name": "Arun",
+    "email": "arun@gmail.com",
+    "mobile": "7654321098",
+    "city": "Madurai",
+    "date": "2026-02-08"
+  },
+  {
+    "id": 4,
+    "name": "Divya",
+    "email": "divya@gmail.com",
+    "mobile": "6543210987",
+    "city": "Salem",
+    "date": "2026-02-10"
+  }
+]
+<!DOCTYPE html>
+<html>
+<head>
+<title>Advanced AJAX Filter</title>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<style>
+body{
+    font-family: Arial;
+    padding:20px;
+    background:#f4f4f4;
+}
+
+input{
+    padding:6px;
+    margin:5px;
+}
+
+table{
+    width:100%;
+    border-collapse: collapse;
+    background:white;
+}
+
+th,td{
+    padding:8px;
+    border:1px solid #ddd;
+    text-align:center;
+}
+
+th{
+    background:#007bff;
+    color:white;
+}
+</style>
+
+</head>
+<body>
+
+<h2>User Data with Filters (No Refresh)</h2>
+
+<!-- Global Search -->
+<input type="text" id="search" placeholder="Global Search">
+
+<!-- Date Filters -->
+Start Date:
+<input type="date" id="startDate">
+
+End Date:
+<input type="date" id="endDate">
+
+<br><br>
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Email</th>
+<th>Mobile</th>
+<th>City</th>
+<th>Date</th>
+</tr>
+
+<!-- Column Filters -->
+<tr>
+<th><input type="text" class="columnFilter" data-column="id"></th>
+<th><input type="text" class="columnFilter" data-column="name"></th>
+<th><input type="text" class="columnFilter" data-column="email"></th>
+<th><input type="text" class="columnFilter" data-column="mobile"></th>
+<th><input type="text" class="columnFilter" data-column="city"></th>
+<th></th>
+</tr>
+
+</thead>
+
+<tbody id="tableData">
+</tbody>
+</table>
+
+<script>
+
+let originalData = [];
+
+$(document).ready(function(){
+
+    $.getJSON("data.json", function(data){
+        originalData = data;
+        renderTable(data);
+    });
+
+    // Global search
+    $("#search").on("keyup", filterData);
+
+    // Column filter
+    $(".columnFilter").on("keyup", filterData);
+
+    // Date filter
+    $("#startDate, #endDate").on("change", filterData);
+
+});
+
+
+function renderTable(data){
+
+    let rows = "";
+
+    $.each(data, function(i, user){
+        rows += `<tr>
+            <td>${user.id}</td>
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td>${user.mobile}</td>
+            <td>${user.city}</td>
+            <td>${user.date}</td>
+        </tr>`;
+    });
+
+    $("#tableData").html(rows);
+}
+
+
+function filterData(){
+
+    let searchValue = $("#search").val().toLowerCase();
+    let startDate = $("#startDate").val();
+    let endDate = $("#endDate").val();
+
+    let filtered = originalData.filter(function(user){
+
+        // Global search
+        let matchSearch =
+            user.name.toLowerCase().includes(searchValue) ||
+            user.email.toLowerCase().includes(searchValue) ||
+            user.mobile.includes(searchValue) ||
+            user.city.toLowerCase().includes(searchValue) ||
+            user.id.toString().includes(searchValue);
+
+        // Column filters
+        let columnMatch = true;
+
+        $(".columnFilter").each(function(){
+            let column = $(this).data("column");
+            let value = $(this).val().toLowerCase();
+
+            if(value && !user[column].toString().toLowerCase().includes(value)){
+                columnMatch = false;
+            }
+        });
+
+        // Date filter
+        let dateMatch = true;
+
+        if(startDate && user.date < startDate){
+            dateMatch = false;
+        }
+
+        if(endDate && user.date > endDate){
+            dateMatch = false;
+        }
+
+        return matchSearch && columnMatch && dateMatch;
+
+    });
+
+    renderTable(filtered);
+}
+
+</script>
+
+</body>
+</html>
