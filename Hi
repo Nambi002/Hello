@@ -1,0 +1,119 @@
+[
+  {
+    "id": 1,
+    "name": "Rahul",
+    "email": "rahul@gmail.com",
+    "mobile": "9876543210",
+    "city": "Chennai"
+  },
+  {
+    "id": 2,
+    "name": "Priya",
+    "email": "priya@gmail.com",
+    "mobile": "8765432109",
+    "city": "Coimbatore"
+  },
+  {
+    "id": 3,
+    "name": "Arun",
+    "email": "arun@gmail.com",
+    "mobile": "7654321098",
+    "city": "Madurai"
+  },
+  {
+    "id": 4,
+    "name": "Divya",
+    "email": "divya@gmail.com",
+    "mobile": "6543210987",
+    "city": "Salem"
+  }
+]
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX JSON Data Rendering</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f4f4;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+        }
+
+        h2 {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>User Data (Loaded via AJAX)</h2>
+
+<table id="userTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Mobile</th>
+            <th>City</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Data will come here -->
+    </tbody>
+</table>
+
+<script>
+$(document).ready(function(){
+
+    $.ajax({
+        url: "data.json",     // JSON file
+        type: "GET",
+        dataType: "json",
+        success: function(data){
+
+            var row = "";
+
+            $.each(data, function(index, user){
+
+                row += "<tr>";
+                row += "<td>" + user.id + "</td>";
+                row += "<td>" + user.name + "</td>";
+                row += "<td>" + user.email + "</td>";
+                row += "<td>" + user.mobile + "</td>";
+                row += "<td>" + user.city + "</td>";
+                row += "</tr>";
+            });
+
+            $("#userTable tbody").html(row);
+        },
+        error: function(){
+            alert("Failed to load JSON data.");
+        }
+    });
+
+});
+</script>
+
+</body>
+</html>
