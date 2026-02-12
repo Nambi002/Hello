@@ -1,3 +1,162 @@
+1. DATABASE
+CREATE DATABASE ajax_filter;
+USE ajax_filter;
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    age INT,
+    phone VARCHAR(15),
+    type VARCHAR(50),
+    created_at DATE
+);
+
+INSERT INTO users (name, age, phone, type, created_at) VALUES
+('Michael Lee', 42, '555-123-4567', 'Admin', '2024-04-18'),
+('Emily Davis', 29, '444-789-1234', 'Staff', '2024-04-15'),
+('David Clark', 36, '222-333-4444', 'Admin', '2024-04-10'),
+('Sarah Wilson', 31, '666-777-8888', 'Customer', '2024-04-08'),
+('Kevin Brown', 45, '999-000-1111', 'Customer', '2024-04-05');
+
+2. db.php
+<?php
+$conn = mysqli_connect("localhost", "root", "", "ajax_filter");
+
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+?>
+
+3. index.php
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Advanced AJAX Filter</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        body { font-family: Arial; margin: 30px; }
+        input, select { padding: 6px; margin-right: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        th { background: #f4f4f4; }
+    </style>
+</head>
+<body>
+
+<h2>User Records</h2>
+
+<input type="text" id="search" placeholder="Search name or phone">
+
+<select id="type">
+    <option value="">All Types</option>
+    <option value="Admin">Admin</option>
+    <option value="Staff">Staff</option>
+    <option value="Customer">Customer</option>
+</select>
+
+Start Date: <input type="date" id="start_date">
+End Date: <input type="date" id="end_date">
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Phone</th>
+            <th>Type</th>
+            <th>Created At</th>
+        </tr>
+    </thead>
+    <tbody id="table_data"></tbody>
+</table>
+
+<script>
+$(document).ready(function(){
+
+    loadData();
+
+    $("#search, #type, #start_date, #end_date").on("keyup change", function(){
+        loadData();
+    });
+
+    function loadData(){
+        $.ajax({
+            url: "fetch.php",
+            type: "POST",
+            data: {
+                search: $("#search").val(),
+                type: $("#type").val(),
+                start_date: $("#start_date").val(),
+                end_date: $("#end_date").val()
+            },
+            success: function(data){
+                $("#table_data").html(data);
+            }
+        });
+    }
+});
+</script>
+
+</body>
+</html>
+
+4. fetch.php
+<?php
+include 'db.php';
+
+$search     = $_POST['search'] ?? '';
+$type       = $_POST['type'] ?? '';
+$start_date = $_POST['start_date'] ?? '';
+$end_date   = $_POST['end_date'] ?? '';
+
+$sql = "SELECT * FROM users WHERE 1";
+
+if ($search != '') {
+    $sql .= " AND (name LIKE '%$search%' OR phone LIKE '%$search%')";
+}
+
+if ($type != '') {
+    $sql .= " AND type = '$type'";
+}
+
+if ($start_date != '' && $end_date != '') {
+    $sql .= " AND created_at BETWEEN '$start_date' AND '$end_date'";
+}
+
+$result = mysqli_query($conn, $sql);
+
+if(mysqli_num_rows($result) > 0){
+    while($row = mysqli_fetch_assoc($result)){
+        echo "<tr>
+                <td>{$row['name']}</td>
+                <td>{$row['age']}</td>
+                <td>{$row['phone']}</td>
+                <td>{$row['type']}</td>
+                <td>{$row['created_at']}</td>
+              </tr>";
+    }
+} else {
+    echo "<tr><td colspan='5'>No records found</td></tr>";
+}
+?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------
+
+
+
+
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100),
