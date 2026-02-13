@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX DataTable Date Filter</title>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+</head>
+
+<body>
+
+<h2>Users List</h2>
+
+<!-- Date Filter -->
+Start Date:
+<input type="date" id="start_date">
+
+End Date:
+<input type="date" id="end_date">
+
+<button id="submitBtn">Submit</button>
+
+<br><br>
+
+<table id="userTable" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>User</th>
+            <th>Email</th>
+            <th>Mobile</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+</table>
+
+<script>
+$(document).ready(function () {
+
+    // JSON Data (No DB)
+    var jsonData = [
+        { id: 1, user: "Arun", email: "arun@gmail.com", mobile: "9876543210", date: "2026-02-01" },
+        { id: 2, user: "Bala", email: "bala@gmail.com", mobile: "9876543211", date: "2026-02-05" },
+        { id: 3, user: "Chandru", email: "chandru@gmail.com", mobile: "9876543212", date: "2026-02-10" },
+        { id: 4, user: "Deepak", email: "deepak@gmail.com", mobile: "9876543213", date: "2026-02-15" },
+        { id: 5, user: "Elan", email: "elan@gmail.com", mobile: "9876543214", date: "2026-02-20" }
+    ];
+
+    // Initialize DataTable
+    var table = $('#userTable').DataTable({
+        data: jsonData,
+        columns: [
+            { data: 'id' },
+            { data: 'user' },
+            { data: 'email' },
+            { data: 'mobile' },
+            { data: 'date' }
+        ]
+    });
+
+    // Custom Date Filter
+    $.fn.dataTable.ext.search.push(
+        function (settings, data, dataIndex) {
+
+            var startDate = $('#start_date').val();
+            var endDate = $('#end_date').val();
+            var rowDate = data[4]; // Date column (index starts 0)
+
+            if (!startDate && !endDate) {
+                return true;
+            }
+
+            var row = new Date(rowDate);
+            var start = startDate ? new Date(startDate) : null;
+            var end = endDate ? new Date(endDate) : null;
+
+            if (start && row < start) {
+                return false;
+            }
+
+            if (end && row > end) {
+                return false;
+            }
+
+            return true;
+        }
+    );
+
+    // Apply filter only when Submit button clicked
+    $('#submitBtn').on('click', function () {
+        table.draw();
+    });
+
+});
+</script>
+
+</body>
+</html>
