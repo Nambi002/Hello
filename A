@@ -132,6 +132,189 @@ $(document).ready(function(){
 </html>
 
 
+------------------------------------------
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX JSON Table</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+        th { cursor: pointer; background: #f4f4f4; }
+        .sort-icon { margin-left: 5px; font-size: 12px; }
+        .controls { margin-bottom: 15px; }
+        input { padding: 5px; margin-right: 5px; }
+    </style>
+</head>
+
+<body>
+
+<h2>Data Rendering using AJAX + JSON</h2>
+
+<div class="controls">
+    <input type="text" id="globalSearch" placeholder="Global Search">
+
+    <input type="date" id="startDate">
+    <input type="date" id="endDate">
+
+    <button id="submitBtn">Submit</button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th data-column="id">ID <span class="sort-icon"></span></th>
+            <th data-column="name">Name <span class="sort-icon"></span></th>
+            <th data-column="email">Email <span class="sort-icon"></span></th>
+            <th data-column="phone">Phone <span class="sort-icon"></span></th>
+            <th data-column="date">Date <span class="sort-icon"></span></th>
+        </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+</table>
+
+<script>
+let originalData = [];
+let filteredData = [];
+let currentSort = { column: null, order: "asc" };
+let dateFilterActive = false;
+
+$(document).ready(function () {
+
+    $.ajax({
+        url: "data.json",
+        method: "GET",
+        success: function (data) {
+            originalData = data;
+            filteredData = [...data];
+            renderTable(filteredData);
+        }
+    });
+
+    // Global Search (Live)
+    $("#globalSearch").on("keyup", function () {
+        applySearch();
+    });
+
+    // Date filter only when Submit clicked
+    $("#submitBtn").click(function () {
+        dateFilterActive = true;
+        applyFilters();
+    });
+
+    // Sorting
+    $("th").click(function () {
+        let column = $(this).data("column");
+
+        if (currentSort.column === column) {
+            currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
+        } else {
+            currentSort.column = column;
+            currentSort.order = "asc";
+        }
+
+        applyFilters();
+        updateSortIcons();
+    });
+});
+
+function applySearch() {
+    let searchText = $("#globalSearch").val().toLowerCase();
+
+    filteredData = originalData.filter(row =>
+        row.id.toString().includes(searchText) ||
+        row.name.toLowerCase().includes(searchText) ||
+        row.email.toLowerCase().includes(searchText) ||
+        row.phone.includes(searchText)
+    );
+
+    if (dateFilterActive) applyDateFilter();
+
+    applySorting();
+    renderTable(filteredData);
+}
+
+function applyFilters() {
+    filteredData = [...originalData];
+
+    applySearch();
+}
+
+function applyDateFilter() {
+    let startDate = $("#startDate").val();
+    let endDate = $("#endDate").val();
+
+    if (!startDate && !endDate) return;
+
+    filteredData = filteredData.filter(row => {
+        let rowDate = row.date;
+
+        if (startDate && rowDate < startDate) return false;
+        if (endDate && rowDate > endDate) return false;
+
+        return true;
+    });
+}
+
+function applySorting() {
+    if (!currentSort.column) return;
+
+    filteredData.sort((a, b) => {
+
+        let valA = a[currentSort.column];
+        let valB = b[currentSort.column];
+
+        // Numeric sort for ID
+        if (currentSort.column === "id") {
+            valA = Number(valA);
+            valB = Number(valB);
+        }
+
+        if (currentSort.order === "asc") {
+            return valA > valB ? 1 : -1;
+        } else {
+            return valA < valB ? 1 : -1;
+        }
+    });
+}
+
+function renderTable(data) {
+    let html = "";
+
+    if (data.length === 0) {
+        html = "<tr><td colspan='5'>No records found</td></tr>";
+    } else {
+        data.forEach(row => {
+            html += `
+                <tr>
+                    <td>${row.id}</td>
+                    <td>${row.name}</td>
+                    <td>${row.email}</td>
+                    <td>${row.phone}</td>
+                    <td>${row.date}</td>
+                </tr>
+            `;
+        });
+    }
+
+    $("#tableBody").html(html);
+}
+
+function updateSortIcons() {
+    $(".sort-icon").text("");
+
+    if (currentSort.column) {
+        let icon = currentSort.order === "asc" ? "▲" : "▼";
+        $(`th[data-column='${currentSort.column}'] .sort-icon`).text(icon);
+    }
+}
+</script>
+
+</body>
+</html>
 
 
 
