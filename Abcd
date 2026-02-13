@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX JSON DataTable</title>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DataTables CSS & JS -->
+    <link rel="stylesheet" 
+          href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+</head>
+
+<body>
+
+<h2>User List</h2>
+
+<!-- Date Filters -->
+Start Date: <input type="date" id="start_date">
+End Date: <input type="date" id="end_date">
+<button id="filterBtn">Submit</button>
+
+<br><br>
+
+<table id="userTable" class="display">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Mobile</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+$(document).ready(function(){
+
+    let table = $('#userTable').DataTable({
+        "ajax": {
+            "url": "data.json",
+            "dataSrc": ""
+        },
+        "columns": [
+            { "data": "id" },
+            { "data": "name" },
+            { "data": "email" },
+            { "data": "mobile" },
+            { "data": "date" }
+        ]
+    });
+
+    // Custom Date Filter (Only runs when Submit clicked)
+    $('#filterBtn').click(function(){
+
+        $.fn.dataTable.ext.search = [];
+
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+
+                let startDate = $('#start_date').val();
+                let endDate = $('#end_date').val();
+                let rowDate = data[4]; // Date column index
+
+                if(startDate === "" && endDate === "")
+                    return true;
+
+                if(startDate === "")
+                    return rowDate <= endDate;
+
+                if(endDate === "")
+                    return rowDate >= startDate;
+
+                return rowDate >= startDate && rowDate <= endDate;
+            }
+        );
+
+        table.draw();
+    });
+
+});
+</script>
+
+</body>
+</html>
