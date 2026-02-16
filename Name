@@ -1,0 +1,49 @@
+<?php
+// Original columns (like table column1 and column2)
+$data = [
+    "column1" => "Nambivelnadhan",
+    "column2" => "9876543210"
+];
+
+// Rename using PHP alias (reference)
+$username =& $data["column1"];
+$phone    =& $data["column2"];
+
+// Include other pages
+include "pg1.php";
+include "pg2.php";
+?>
+
+
+<?php
+echo "<h3>PG1</h3>";
+echo "Welcome " . $username . "<br>";
+echo "Phone: " . $phone . "<br>";
+?>
+
+
+
+<?php
+echo "<h3>PG2</h3>";
+echo "Welcome " . $username . "<br>";
+echo "Phone: " . $phone . "<br>";
+?>
+
+
+
+
+$user = [
+    "column1" => "Nambi",
+    "column2" => "9876543210"
+];
+
+
+$user = [
+    "username" => $user["column1"],
+    "phone"    => $user["column2"]
+];
+
+
+$username = $user["column1"];
+$phone    = $user["column2"];
+
