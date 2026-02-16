@@ -1,0 +1,59 @@
+<?php
+// ----------------------------
+// ORIGINAL TABLE DATA (Before)
+// ----------------------------
+$row = [
+    "column1" => "Nambivelnadhan",
+    "column2" => "9876543210"
+];
+
+// ----------------------------
+// ALIAS (Rename Using PHP)
+// ----------------------------
+$username =& $row["column1"];   // column1 → username
+$phone    =& $row["column2"];   // column2 → phone
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alias Concept Demo</title>
+</head>
+<body>
+
+<h2>Before (Original Columns)</h2>
+<table border="1" cellpadding="10">
+    <tr>
+        <th>column1</th>
+        <th>column2</th>
+    </tr>
+    <tr>
+        <td><?php echo $row["column1"]; ?></td>
+        <td><?php echo $row["column2"]; ?></td>
+    </tr>
+</table>
+
+<br><br>
+
+<h2>After (Renamed Using PHP Alias)</h2>
+<table border="1" cellpadding="10">
+    <tr>
+        <th>Username</th>
+        <th>Phone</th>
+    </tr>
+    <tr>
+        <td><?php echo $username; ?></td>
+        <td><?php echo $phone; ?></td>
+    </tr>
+</table>
+
+<br><br>
+
+<?php
+// Include other pages
+include "pg1.php";
+include "pg2.php";
+?>
+
+</body>
+</html>
