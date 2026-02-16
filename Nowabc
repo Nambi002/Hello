@@ -1,0 +1,99 @@
+<?php
+// Original Data (like DB data)
+$data = [
+    "name" => "Nambi",
+    "phonenumber" => "9876543210"
+];
+
+// ✅ PHP Alias Mapping
+$alias = [
+    "name" => "username",
+    "phonenumber" => "mobile"
+];
+
+// Function to convert original keys to alias keys
+function applyAlias($data, $alias) {
+    $newData = [];
+
+    foreach ($data as $key => $value) {
+        if (isset($alias[$key])) {
+            $newKey = $alias[$key];  // change key
+            $newData[$newKey] = $value;
+        } else {
+            $newData[$key] = $value;
+        }
+    }
+
+    return $newData;
+}
+?>
+
+
+
+admin 
+
+<?php
+include "data.php";
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $data["name"] = $_POST["name"];
+    $data["phonenumber"] = $_POST["phonenumber"];
+}
+
+// Apply alias for display
+$aliasData = applyAlias($data, $alias);
+?>
+
+<h2>Admin Page</h2>
+
+<form method="POST">
+    Name:
+    <input type="text" name="name" value="<?php echo $data['name']; ?>">
+    <br><br>
+
+    Phone Number:
+    <input type="text" name="phonenumber" value="<?php echo $data['phonenumber']; ?>">
+    <br><br>
+
+    <button type="submit">Update</button>
+</form>
+
+<hr>
+
+<h3>After Alias Applied:</h3>
+Username: <?php echo $aliasData['username']; ?> <br>
+Mobile: <?php echo $aliasData['mobile']; ?>
+
+<br><br>
+<a href="page1.php">Go to Page1</a> |
+<a href="page2.php">Go to Page2</a>
+
+
+<?php
+include "data.php";
+
+$aliasData = applyAlias($data, $alias);
+?>
+
+<h2>Page 1</h2>
+
+Welcome <?php echo $aliasData['username']; ?> <br>
+Your Mobile: <?php echo $aliasData['mobile']; ?>
+
+<br><br>
+<a href="admin.php">Back to Admin</a>
+
+<?php
+include "data.php";
+
+$aliasData = applyAlias($data, $alias);
+?>
+
+<h2>Page 2</h2>
+
+Hello <?php echo $aliasData['username']; ?> <br>
+Contact: <?php echo $aliasData['mobile']; ?>
+
+<br><br>
+<a href="admin.php">Back to Admin</a>
+
