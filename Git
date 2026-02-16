@@ -1,0 +1,246 @@
+data json alias
+{
+    "fname": {},
+    "mobile": {}
+}
+
+
+alis.php 
+
+<?php
+
+function getColumnAlias() {
+    return json_decode(file_get_contents("alias.json"), true);
+}
+
+function getDataAlias() {
+    return json_decode(file_get_contents("data_alias.json"), true);
+}
+
+function updateColumnAlias($newAlias) {
+    file_put_contents("alias.json", json_encode($newAlias, JSON_PRETTY_PRINT));
+}
+
+function updateDataAlias($newAlias) {
+    file_put_contents("data_alias.json", json_encode($newAlias, JSON_PRETTY_PRINT));
+}
+
+function applyAlias($data) {
+
+    $columnAlias = getColumnAlias();
+    $dataAlias   = getDataAlias();
+
+    $final = [];
+
+    foreach ($data as $key => $value) {
+
+        $newKey = isset($columnAlias[$key]) ? $columnAlias[$key] : $key;
+
+        if(isset($dataAlias[$key][$value])) {
+            $value = $dataAlias[$key][$value];
+        }
+
+        $final[$newKey] = $value;
+    }
+
+    return $final;
+}
+?>
+
+
+
+
+index.php 
+
+<?php
+session_start();
+
+if(isset($_POST['submit'])) {
+
+    $_SESSION['user_data'] = [
+        "fname"  => $_POST['fname'],
+        "mobile" => $_POST['mobile']
+    ];
+
+    header("Location: view.php");
+}
+?>
+
+<h2>User Input</h2>
+
+<form method="post">
+    Name: <input type="text" name="fname" required><br><br>
+    Mobile: <input type="text" name="mobile" required><br><br>
+    <button type="submit" name="submit">Submit</button>
+</form>
+
+<br>
+<a href="edit_alias.php">Edit Column Name</a><br>
+<a href="edit_data_alias.php">Edit Column Value</a>
+
+
+iew.php
+
+
+
+<?php
+session_start();
+include "alias.php";
+
+$data = $_SESSION['user_data'] ?? [];
+$finalData = applyAlias($data);
+?>
+
+<h2>Admin Table View</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+<?php foreach($finalData as $col => $val){ ?>
+    <th><?php echo $col; ?></th>
+<?php } ?>
+</tr>
+
+<tr>
+<?php foreach($finalData as $val){ ?>
+    <td><?php echo $val; ?></td>
+<?php } ?>
+</tr>
+</table>
+
+<br>
+<a href="page1.php">Go to Page 1</a><br>
+<a href="page2.php">Go to Page 2</a><br>
+<a href="index.php">Back</a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pg1 .php
+
+<?php
+session_start();
+include "alias.php";
+
+$data = $_SESSION['user_data'] ?? [];
+$finalData = applyAlias($data);
+
+$values = array_values($finalData);
+?>
+
+<h2>Page 1</h2>
+
+<p>Welcome <?php echo $values[0] ?? ''; ?></p>
+<p><?php echo array_keys($finalData)[1] ?? ''; ?> : <?php echo $values[1] ?? ''; ?></p>
+
+<br>
+<a href="view.php">Back to Admin</a>
+
+
+
+
+
+
+
+pg1.php
+
+<?php
+session_start();
+include "alias.php";
+
+$data = $_SESSION['user_data'] ?? [];
+$finalData = applyAlias($data);
+?>
+
+<h2>Page 2 - Profile</h2>
+
+<?php foreach($finalData as $col => $val){ ?>
+    <p><strong><?php echo $col; ?> :</strong> <?php echo $val; ?></p>
+<?php } ?>
+
+<br>
+<a href="view.php">Back to Admin</a>
+
+
+
+
+edit alis
+php
+<?php
+include "alias.php";
+
+if(isset($_POST['update'])) {
+
+    $newAlias = [
+        "fname"  => $_POST['fname_alias'],
+        "mobile" => $_POST['mobile_alias']
+    ];
+
+    updateColumnAlias($newAlias);
+
+    header("Location: view.php");
+}
+?>
+
+<h2>Edit Column Names</h2>
+
+<form method="post">
+    Fname Alias: <input type="text" name="fname_alias"><br><br>
+    Mobile Alias: <input type="text" name="mobile_alias"><br><br>
+
+    <button type="submit" name="update">Update</button>
+</form>
+
+
+
+edit data 
+
+
+
+<?php
+include "alias.php";
+
+if(isset($_POST['update'])) {
+
+    $dataAlias = getDataAlias();
+
+    $column = $_POST['column'];
+    $oldVal = $_POST['old_value'];
+    $newVal = $_POST['new_value'];
+
+    $dataAlias[$column][$oldVal] = $newVal;
+
+    updateDataAlias($dataAlias);
+
+    header("Location: view.php");
+}
+?>
+
+<h2>Edit Column Value</h2>
+
+<form method="post">
+    Column:
+    <select name="column">
+        <option value="fname">fname</option>
+        <option value="mobile">mobile</option>
+    </select><br><br>
+
+    Old Value: <input type="text" name="old_value"><br><br>
+    New Value: <input type="text" name="new_value"><br><br>
+
+    <button type="submit" name="update">Update</button>
+</form>
+
+
