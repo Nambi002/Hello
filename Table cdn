@@ -1,0 +1,79 @@
+{
+    "fname": "fname",
+    "mobile": "mobile"
+}
+
+
+<?php
+
+function getAlias() {
+    return json_decode(file_get_contents("alias.json"), true);
+}
+
+function updateAlias($newAlias) {
+    file_put_contents("alias.json", json_encode($newAlias, JSON_PRETTY_PRINT));
+}
+
+function applyAlias($data) {
+    $alias = getAlias();
+    $newData = [];
+
+    foreach ($data as $key => $value) {
+        $newKey = isset($alias[$key]) ? $alias[$key] : $key;
+        $newData[$newKey] = $value;
+    }
+
+    return $newData;
+}
+?>
+
+
+<?php
+include "alias.php";
+
+$data = [
+    "fname" => "Nambi",
+    "mobile" => "9876543210"
+];
+
+$alias = getAlias();
+?>
+
+<table border="1">
+<tr>
+    <th><?php echo $alias["fname"]; ?></th>
+    <th><?php echo $alias["mobile"]; ?></th>
+</tr>
+<tr>
+    <td><?php echo $data["fname"]; ?></td>
+    <td><?php echo $data["mobile"]; ?></td>
+</tr>
+</table>
+
+<a href="edit_alias.php">Edit Column Names</a>
+
+
+
+
+<?php
+include "alias.php";
+
+if(isset($_POST['update'])) {
+
+    $newAlias = [
+        "fname" => $_POST['fname_alias'],
+        "mobile" => $_POST['mobile_alias']
+    ];
+
+    updateAlias($newAlias);
+
+    header("Location: admin.php");
+}
+?>
+
+<form method="post">
+    Fname Alias: <input type="text" name="fname_alias"><br><br>
+    Mobile Alias: <input type="text" name="mobile_alias"><br><br>
+
+    <button type="submit" name="update">Update</button>
+</form>
