@@ -1,544 +1,144 @@
-[
-  {"id":1,"name":"Arun","email":"arun@gmail.com","phone":"9876543210","date":"2026-01-10"},
-  {"id":2,"name":"Bala","email":"bala@gmail.com","phone":"9123456780","date":"2026-01-15"},
-  {"id":3,"name":"Charan","email":"charan@gmail.com","phone":"9012345678","date":"2026-02-01"},
-  {"id":4,"name":"Divya","email":"divya@gmail.com","phone":"9988776655","date":"2026-02-05"},
-  {"id":5,"name":"Elan","email":"elan@gmail.com","phone":"9090909090","date":"2026-02-10"}
-]
+view<?php
+session_start();
+
+if(!isset($_SESSION['data'])){
+    $_SESSION['data'] = [
+     
+    ];
+}
+
+$data = $_SESSION['data'];
+?>
 
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AJAX JSON Table</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body { font-family: Arial; padding:20px; }
-        table { border-collapse: collapse; width:100%; margin-top:15px;}
-        th, td { border:1px solid #ccc; padding:8px; text-align:left; }
-        th { cursor:pointer; background:#f2f2f2; }
-        .arrow { font-size:12px; margin-left:5px; }
-        .top-bar { display:flex; gap:10px; flex-wrap:wrap; }
-        input { padding:5px; }
-        button { padding:6px 10px; cursor:pointer; }
-    </style>
+    <title>Admin</title>
 </head>
 <body>
 
-<h2>Data Rendering using AJAX + JSON</h2>
+<h2>MENU LIST</h2>
 
-<div class="top-bar">
-    <input type="text" id="search" placeholder="Global Search">
-    <input type="date" id="startDate">
-    <input type="date" id="endDate">
-    <button id="dateFilter">Submit</button>
-</div>
+<table border="1" cellpadding="10">
+    <tr>
+        <th>Menu List</th>
+        <th>View</th>
+    </tr>
 
-<table>
-    <thead>
-        <tr>
-            <th data-column="id">ID <span class="arrow"></span></th>
-            <th data-column="name">Name <span class="arrow"></span></th>
-            <th data-column="email">Email <span class="arrow"></span></th>
-            <th data-column="phone">Phone <span class="arrow"></span></th>
-            <th data-column="date">Date <span class="arrow"></span></th>
-        </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
+    <tr>
+        <td>Username</td>
+        <td>
+            <?php echo $data['username']; ?>
+            <a href="edit.php?field=username">Edit</a>
+        </td>
+    </tr>
+
+    <tr>
+        <td>Phone Number</td>
+        <td>
+            <?php echo $data['phone']; ?>
+            <a href="edit.php?field=phone">Edit</a>
+        </td>
+    </tr>
 </table>
 
-<script>
-let tableData = [];
-let sortOrder = {};
-let originalData = [];
-
-$(document).ready(function(){
-
-    // AJAX Load JSON
-    $.ajax({
-        url: "data.json",
-        method: "GET",
-        dataType: "json",
-        success: function(data){
-            tableData = data;
-            originalData = data;
-            renderTable(data);
-        }
-    });
-
-    // Render Function
-    function renderTable(data){
-        let rows = "";
-        $.each(data, function(index, item){
-            rows += `<tr>
-                        <td>${item.id}</td>
-                        <td>${item.name}</td>
-                        <td>${item.email}</td>
-                        <td>${item.phone}</td>
-                        <td>${item.date}</td>
-                    </tr>`;
-        });
-        $("#tableBody").html(rows);
-    }
-
-    // Global Search
-    $("#search").on("keyup", function(){
-        let value = $(this).val().toLowerCase();
-        let filtered = originalData.filter(item =>
-            Object.values(item).some(val =>
-                String(val).toLowerCase().includes(value)
-            )
-        );
-        tableData = filtered;
-        renderTable(filtered);
-    });
-
-    // Date Filter
-    $("#dateFilter").click(function(){
-        let start = $("#startDate").val();
-        let end = $("#endDate").val();
-
-        let filtered = originalData.filter(item => {
-            if(start && item.date < start) return false;
-            if(end && item.date > end) return false;
-            return true;
-        });
-
-        tableData = filtered;
-        renderTable(filtered);
-    });
-
-    // Column Sorting
-    $("th").click(function(){
-        let column = $(this).data("column");
-
-        sortOrder[column] = !sortOrder[column];
-
-        tableData.sort(function(a,b){
-            if(a[column] < b[column]) return sortOrder[column] ? -1 : 1;
-            if(a[column] > b[column]) return sortOrder[column] ? 1 : -1;
-            return 0;
-        });
-
-        $(".arrow").html("");
-        $(this).find(".arrow").html(sortOrder[column] ? "▲" : "▼");
-
-        renderTable(tableData);
-    });
-
-});
-</script>
+<br>
+<a href="page1.php">Go to Page 1</a><br><br>
+<a href="page2.php">Go to Page 2</a>
 
 </body>
 </html>
+----------
+pg1
+<?php
+session_start();
+include "alias.php";
 
-
-------------------------------------------
-<!DOCTYPE html>
-<html>
-<head>
-    <title>AJAX JSON Table</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <style>
-        body { font-family: Arial; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; }
-        th { cursor: pointer; background: #f4f4f4; }
-        .sort-icon { margin-left: 5px; font-size: 12px; }
-        .controls { margin-bottom: 15px; }
-        input { padding: 5px; margin-right: 5px; }
-    </style>
-</head>
-
-<body>
-
-<h2>Data Rendering using AJAX + JSON</h2>
-
-<div class="controls">
-    <input type="text" id="globalSearch" placeholder="Global Search">
-
-    <input type="date" id="startDate">
-    <input type="date" id="endDate">
-
-    <button id="submitBtn">Submit</button>
-</div>
-
-<table>
-    <thead>
-        <tr>
-            <th data-column="id">ID <span class="sort-icon"></span></th>
-            <th data-column="name">Name <span class="sort-icon"></span></th>
-            <th data-column="email">Email <span class="sort-icon"></span></th>
-            <th data-column="phone">Phone <span class="sort-icon"></span></th>
-            <th data-column="date">Date <span class="sort-icon"></span></th>
-        </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-</table>
-
-<script>
-let originalData = [];
-let filteredData = [];
-let currentSort = { column: null, order: "asc" };
-let dateFilterActive = false;
-
-$(document).ready(function () {
-
-    $.ajax({
-        url: "data.json",
-        method: "GET",
-        success: function (data) {
-            originalData = data;
-            filteredData = [...data];
-            renderTable(filteredData);
-        }
-    });
-
-    // Global Search (Live)
-    $("#globalSearch").on("keyup", function () {
-        applySearch();
-    });
-
-    // Date filter only when Submit clicked
-    $("#submitBtn").click(function () {
-        dateFilterActive = true;
-        applyFilters();
-    });
-
-    // Sorting
-    $("th").click(function () {
-        let column = $(this).data("column");
-
-        if (currentSort.column === column) {
-            currentSort.order = currentSort.order === "asc" ? "desc" : "asc";
-        } else {
-            currentSort.column = column;
-            currentSort.order = "asc";
-        }
-
-        applyFilters();
-        updateSortIcons();
-    });
-});
-
-function applySearch() {
-    let searchText = $("#globalSearch").val().toLowerCase();
-
-    filteredData = originalData.filter(row =>
-        row.id.toString().includes(searchText) ||
-        row.name.toLowerCase().includes(searchText) ||
-        row.email.toLowerCase().includes(searchText) ||
-        row.phone.includes(searchText)
-    );
-
-    if (dateFilterActive) applyDateFilter();
-
-    applySorting();
-    renderTable(filteredData);
+if(!isset($_SESSION['user_data'])) {
+    $_SESSION['user_data'] = [
+        "name"  => "Test1",
+        "mobile" => "8220547549"
+    ];
 }
 
-function applyFilters() {
-    filteredData = [...originalData];
+$data = $_SESSION['user_data'];
+$finalData = applyAlias($data);
+?>
 
-    applySearch();
+<h2>Page 1 - Profile</h2>
+
+<?php foreach($finalData as $col => $val){ ?>
+    <p><strong><?php echo $col; ?> :</strong> <?php echo $val; ?></p>
+<?php } ?>
+
+<br>
+<a href="view.php">Back to Admin</a>
+
+
+-----------------
+pg2
+<?php
+session_start();
+include "alias.php";
+
+if(!isset($_SESSION['user_data'])) {
+    $_SESSION['user_data'] = [
+        "name"  => "Test2",
+        "mobile" => "9878654523"
+    ];
 }
 
-function applyDateFilter() {
-    let startDate = $("#startDate").val();
-    let endDate = $("#endDate").val();
+$data = $_SESSION['user_data'];
+$finalData = applyAlias($data);
+?>
 
-    if (!startDate && !endDate) return;
+<h2>Page 2 - Profile</h2>
 
-    filteredData = filteredData.filter(row => {
-        let rowDate = row.date;
+<?php foreach($finalData as $col => $val){ ?>
+    <p><strong><?php echo $col; ?> :</strong> <?php echo $val; ?></p>
+<?php } ?>
 
-        if (startDate && rowDate < startDate) return false;
-        if (endDate && rowDate > endDate) return false;
+<br>
+<a href="view.php">Back to Admin</a>
 
-        return true;
-    });
+
+
+
+---------------------------
+
+edit_a;lias.php
+
+<?php
+include "alias.php";
+
+if(isset($_POST['update'])) {
+
+    $existing = getColumnAlias();
+
+    $existing["name"] = $_POST['name_alias'];
+
+    updateColumnAlias($existing);
+
+    header("Location: view.php");
 }
+?>
 
-function applySorting() {
-    if (!currentSort.column) return;
 
-    filteredData.sort((a, b) => {
+------------------------
+edit 2 .php
 
-        let valA = a[currentSort.column];
-        let valB = b[currentSort.column];
+<?php
+include "alias.php";
 
-        // Numeric sort for ID
-        if (currentSort.column === "id") {
-            valA = Number(valA);
-            valB = Number(valB);
-        }
+if(isset($_POST['update'])) {
 
-        if (currentSort.order === "asc") {
-            return valA > valB ? 1 : -1;
-        } else {
-            return valA < valB ? 1 : -1;
-        }
-    });
+    $existing = getColumnAlias();
+
+    $existing["mobile"] = $_POST['mobile_alias'];
+
+    updateColumnAlias($existing);
+
+    header("Location: view.php");
 }
-
-function renderTable(data) {
-    let html = "";
-
-    if (data.length === 0) {
-        html = "<tr><td colspan='5'>No records found</td></tr>";
-    } else {
-        data.forEach(row => {
-            html += `
-                <tr>
-                    <td>${row.id}</td>
-                    <td>${row.name}</td>
-                    <td>${row.email}</td>
-                    <td>${row.phone}</td>
-                    <td>${row.date}</td>
-                </tr>
-            `;
-        });
-    }
-
-    $("#tableBody").html(html);
-}
-
-function updateSortIcons() {
-    $(".sort-icon").text("");
-
-    if (currentSort.column) {
-        let icon = currentSort.order === "asc" ? "▲" : "▼";
-        $(`th[data-column='${currentSort.column}'] .sort-icon`).text(icon);
-    }
-}
-</script>
-
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
--------------------------------------
-
-
-
-[
-  {
-    "id": 1,
-    "name": "Rahul",
-    "email": "rahul@gmail.com",
-    "mobile": "9876543210",
-    "city": "Chennai",
-    "date": "2026-02-01"
-  },
-  {
-    "id": 2,
-    "name": "Priya",
-    "email": "priya@gmail.com",
-    "mobile": "8765432109",
-    "city": "Coimbatore",
-    "date": "2026-02-05"
-  },
-  {
-    "id": 3,
-    "name": "Arun",
-    "email": "arun@gmail.com",
-    "mobile": "7654321098",
-    "city": "Madurai",
-    "date": "2026-02-08"
-  },
-  {
-    "id": 4,
-    "name": "Divya",
-    "email": "divya@gmail.com",
-    "mobile": "6543210987",
-    "city": "Salem",
-    "date": "2026-02-10"
-  }
-]
-<!DOCTYPE html>
-<html>
-<head>
-<title>Advanced AJAX Filter</title>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<style>
-body{
-    font-family: Arial;
-    padding:20px;
-    background:#f4f4f4;
-}
-
-input{
-    padding:6px;
-    margin:5px;
-}
-
-table{
-    width:100%;
-    border-collapse: collapse;
-    background:white;
-}
-
-th,td{
-    padding:8px;
-    border:1px solid #ddd;
-    text-align:center;
-}
-
-th{
-    background:#007bff;
-    color:white;
-}
-</style>
-
-</head>
-<body>
-
-<h2>User Data with Filters (No Refresh)</h2>
-
-<!-- Global Search -->
-<input type="text" id="search" placeholder="Global Search">
-
-<!-- Date Filters -->
-Start Date:
-<input type="date" id="startDate">
-
-End Date:
-<input type="date" id="endDate">
-
-<br><br>
-
-<table>
-<thead>
-<tr>
-<th>ID</th>
-<th>Name</th>
-<th>Email</th>
-<th>Mobile</th>
-<th>City</th>
-<th>Date</th>
-</tr>
-
-<!-- Column Filters -->
-<tr>
-<th><input type="text" class="columnFilter" data-column="id"></th>
-<th><input type="text" class="columnFilter" data-column="name"></th>
-<th><input type="text" class="columnFilter" data-column="email"></th>
-<th><input type="text" class="columnFilter" data-column="mobile"></th>
-<th><input type="text" class="columnFilter" data-column="city"></th>
-<th></th>
-</tr>
-
-</thead>
-
-<tbody id="tableData">
-</tbody>
-</table>
-
-<script>
-
-let originalData = [];
-
-$(document).ready(function(){
-
-    $.getJSON("data.json", function(data){
-        originalData = data;
-        renderTable(data);
-    });
-
-    // Global search
-    $("#search").on("keyup", filterData);
-
-    // Column filter
-    $(".columnFilter").on("keyup", filterData);
-
-    // Date filter
-    $("#startDate, #endDate").on("change", filterData);
-
-});
-
-
-function renderTable(data){
-
-    let rows = "";
-
-    $.each(data, function(i, user){
-        rows += `<tr>
-            <td>${user.id}</td>
-            <td>${user.name}</td>
-            <td>${user.email}</td>
-            <td>${user.mobile}</td>
-            <td>${user.city}</td>
-            <td>${user.date}</td>
-        </tr>`;
-    });
-
-    $("#tableData").html(rows);
-}
-
-
-function filterData(){
-
-    let searchValue = $("#search").val().toLowerCase();
-    let startDate = $("#startDate").val();
-    let endDate = $("#endDate").val();
-
-    let filtered = originalData.filter(function(user){
-
-        // Global search
-        let matchSearch =
-            user.name.toLowerCase().includes(searchValue) ||
-            user.email.toLowerCase().includes(searchValue) ||
-            user.mobile.includes(searchValue) ||
-            user.city.toLowerCase().includes(searchValue) ||
-            user.id.toString().includes(searchValue);
-
-        // Column filters
-        let columnMatch = true;
-
-        $(".columnFilter").each(function(){
-            let column = $(this).data("column");
-            let value = $(this).val().toLowerCase();
-
-            if(value && !user[column].toString().toLowerCase().includes(value)){
-                columnMatch = false;
-            }
-        });
-
-        // Date filter
-        let dateMatch = true;
-
-        if(startDate && user.date < startDate){
-            dateMatch = false;
-        }
-
-        if(endDate && user.date > endDate){
-            dateMatch = false;
-        }
-
-        return matchSearch && columnMatch && dateMatch;
-
-    });
-
-    renderTable(filtered);
-}
-
-</script>
-
-</body>
-</html>
+?>
+------------------------
