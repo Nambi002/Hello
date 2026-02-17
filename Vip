@@ -1,0 +1,54 @@
+<?php
+session_start();
+
+$data = $_SESSION['user_data'] ?? [
+    "user" => "Nambi",
+    "phone" => "9876543210"
+];
+?>
+
+<h2>Admin Table View</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>Menu List</th>
+        <th>Action</th>
+    </tr>
+
+    <?php foreach ($data as $key => $value): ?>
+        <tr>
+            <td><?php echo ucfirst($key); ?></td>
+            <td>
+                <a href="edit.php?field=<?php echo $key; ?>">Edit</a>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+
+</table>
+
+
+<?php
+session_start();
+
+$field = $_GET['field'];
+
+if (!isset($_SESSION['user_data'][$field])) {
+    echo "Invalid field!";
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $_SESSION['user_data'][$field] = $_POST['value'];
+    header("Location: view.php");
+    exit;
+}
+
+$currentValue = $_SESSION['user_data'][$field];
+?>
+
+<h2>Edit <?php echo ucfirst($field); ?></h2>
+
+<form method="post">
+    <input type="text" name="value" value="<?php echo $currentValue; ?>">
+    <button type="submit">Update</button>
+</form>
