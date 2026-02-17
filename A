@@ -142,3 +142,124 @@ if(isset($_POST['update'])) {
 }
 ?>
 ------------------------
+
+ui view.php
+
+<?php
+session_start();
+include "alias.php";
+
+$data = $_SESSION['user_data'] ?? [];
+$finalData = applyAlias($data);
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Panel</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f6f9;
+}
+
+.container{
+    width:400px;
+    margin:80px auto;
+    background:#fff;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.1);
+}
+
+h2{
+    text-align:center;
+    margin-bottom:25px;
+    color:#333;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th{
+    background:#4CAF50;
+    color:white;
+    padding:10px;
+    text-align:left;
+}
+
+td{
+    padding:12px;
+    border-bottom:1px solid #ddd;
+}
+
+tr:hover{
+    background:#f1f1f1;
+}
+
+a.edit-btn{
+    background:#2196F3;
+    color:white;
+    padding:6px 12px;
+    border-radius:5px;
+    text-decoration:none;
+    font-size:14px;
+}
+
+a.edit-btn:hover{
+    background:#0b7dda;
+}
+
+.links{
+    margin-top:20px;
+    text-align:center;
+}
+
+.links a{
+    text-decoration:none;
+    margin:5px;
+    color:#4CAF50;
+    font-weight:bold;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2>Admin Menu</h2>
+
+<table>
+
+<tr>
+    <th>Menu List</th>
+    <th>Action</th>
+</tr>
+
+<?php foreach($finalData as $col => $val){ ?>
+<tr>
+    <td><?php echo $col; ?></td>
+    <td>
+        <a class="edit-btn" href="<?php echo ($col == 'User') ? 'edit_alias.php' : 'edit2.php'; ?>">
+            Edit
+        </a>
+    </td>
+</tr>
+<?php } ?>
+
+</table>
+
+<div class="links">
+    <a href="pg1.php">Page 1</a> |
+    <a href="pg2.php">Page 2</a>
+</div>
+
+</div>
+
+</body>
+</html>
+
