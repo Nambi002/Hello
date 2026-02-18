@@ -1,0 +1,77 @@
+<?php 
+include "alias.php";
+
+$currentAlias = getColumnAlias(); // Get existing alias
+
+if(isset($_POST['update'])) {
+    $newAlias = [
+        "user"  => $_POST['name_alias'],
+        "number" => $_POST['mobile_alias']
+    ];
+
+    updateColumnAlias($newAlias);
+
+    header("Location: view.php");
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="container">
+<h2>Edit Column Names</h2>
+
+<form method="post">
+    
+    Name Alias:
+    <input type="text" 
+           name="name_alias" 
+           value="<?php echo htmlspecialchars($currentAlias['user']); ?>" 
+           required>
+    <br><br>
+
+    Mobile Alias:
+    <input type="text" 
+           name="mobile_alias" 
+           value="<?php echo htmlspecialchars($currentAlias['number']); ?>" 
+           required>
+    <br><br>
+
+<div class="button">
+    <button type="submit" name="update">Update</button>
+    <a href="view.php">
+        <button type="button">Cancel</button>
+    </a>
+</div>
+
+</form>
+</div>
+</body>
+</html>
+
+
+
+<?php
+session_start();
+
+function getColumnAlias() {
+    return $_SESSION['column_alias'] ?? [
+        "user" => "Name",
+        "number" => "Mobile"
+    ];
+}
+
+function updateColumnAlias($newAlias) {
+    $_SESSION['column_alias'] = $newAlias;
+}
+?>
+
+
