@@ -33,3 +33,172 @@ if(mysqli_query($conn, $sql)){
     echo 0;
 }
 ?>
+
+
+
+
+
+
+
+
+
+-----------+++
+
+
+
+
+<?php include "db.php"; ?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Example</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body{
+            font-family: Arial;
+            background:#f4f4f4;
+            padding:30px;
+        }
+        table{
+            width:60%;
+            margin:auto;
+            border-collapse: collapse;
+            background:white;
+        }
+        th, td{
+            padding:10px;
+            border:1px solid #ddd;
+            text-align:center;
+        }
+        th{
+            background:#007bff;
+            color:white;
+        }
+        button{
+            background:red;
+            color:white;
+            border:none;
+            padding:6px 12px;
+            cursor:pointer;
+        }
+        button:hover{
+            background:darkred;
+        }
+    </style>
+</head>
+<body>
+
+<h2 align="center">User Table</h2>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Action</th>
+    </tr>
+
+<?php
+$sql = "SELECT * FROM users";
+$result = mysqli_query($conn,$sql);
+
+while($row = mysqli_fetch_assoc($result)){
+?>
+
+<tr id="row_<?php echo $row['id']; ?>">
+    <td><?php echo $row['id']; ?></td>
+    <td><?php echo $row['name']; ?></td>
+    <td><?php echo $row['phone']; ?></td>
+    <td>
+        <button class="deleteBtn" data-id="<?php echo $row['id']; ?>">
+            Delete
+        </button>
+    </td>
+</tr>
+
+<?php } ?>
+
+</table>
+
+<script>
+$(document).on("click",".deleteBtn",function(){
+
+    if(confirm("Are you sure to delete?")){
+
+        var id = $(this).data("id");
+        var row = $("#row_"+id);
+
+        $.ajax({
+            url:"delete.php",
+            type:"POST",
+            data:{id:id},
+            success:function(response){
+                if(response == 1){
+                    row.fadeOut(500,function(){
+                        $(this).remove();
+                    });
+                }else{
+                    alert("Delete Failed");
+                }
+            }
+        });
+
+    }
+
+});
+</script>
+
+</body>
+</html>
+
+
+
+
+
+table 
+
+
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    phone VARCHAR(20)
+);
+INSERT INTO users (name,phone) VALUES
+('Nambi','9876543210'),
+('Arun','9123456780');
+
+
+
+
+delete
+
+<?php
+include "db.php";
+
+$id = $_POST['id'];
+
+$sql = "DELETE FROM users WHERE id='$id'";
+
+if(mysqli_query($conn,$sql)){
+    echo 1;
+}else{
+    echo 0;
+}
+?>
+
+
+
+db
+
+
+<?php
+$conn = mysqli_connect("localhost","root","","test");
+
+if(!$conn){
+    die("Connection Failed");
+}
+?>
+
