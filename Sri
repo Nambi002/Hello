@@ -1,0 +1,35 @@
+<button class="deleteBtn" data-id="1">Delete</button>
+
+$(document).on("click", ".deleteBtn", function(){
+    var id = $(this).data("id");
+    var row = $(this).closest("tr");
+
+    $.ajax({
+        url: "delete.php",
+        type: "POST",
+        data: {id:id},
+        success: function(response){
+            if(response == 1){
+                row.remove();   // Remove from UI
+                alert("Deleted successfully");
+            }else{
+                alert("Delete failed");
+            }
+        }
+    });
+});
+
+
+<?php
+$conn = mysqli_connect("localhost","root","","test");
+
+$id = $_POST['id'];
+
+$sql = "DELETE FROM users WHERE id = $id";
+
+if(mysqli_query($conn, $sql)){
+    echo 1;
+}else{
+    echo 0;
+}
+?>
