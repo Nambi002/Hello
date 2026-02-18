@@ -1,0 +1,197 @@
+CREATE DATABASE test;
+USE test;
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    phone VARCHAR(20),
+    status TINYINT(1) DEFAULT 1
+);
+INSERT INTO users (name,phone) VALUES
+('Nambi','9876543210'),
+('Arun','9123456780'),
+('Kumar','9988776655');
+
+
+db.ph
+<?php
+$conn = mysqli_connect("localhost","root","","test");
+
+if(!$conn){
+    die("Connection Failed");
+}
+?>
+
+index
+
+<?php include "db.php"; ?>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Active Users</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<h2>Active Users</h2>
+<a href="trash.php">Go To Trash</a>
+
+<table border="1" cellpadding="10">
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Phone</th>
+<th>Action</th>
+</tr>
+
+<?php
+$sql = "SELECT * FROM users WHERE status=1";
+$result = mysqli_query($conn,$sql);
+
+while($row=mysqli_fetch_assoc($result)){
+?>
+
+<tr id="row_<?php echo $row['id']; ?>">
+<td><?php echo $row['id']; ?></td>
+<td><?php echo $row['name']; ?></td>
+<td><?php echo $row['phone']; ?></td>
+<td>
+<button class="softDelete" data-id="<?php echo $row['id']; ?>">Delete</button>
+</td>
+</tr>
+
+<?php } ?>
+</table>
+
+<script>
+$(document).on("click",".softDelete",function(){
+    var id=$(this).data("id");
+    var row=$("#row_"+id);
+
+    $.post("soft_delete.php",{id:id},function(res){
+        if(res==1){
+            row.fadeOut(500,function(){ $(this).remove(); });
+        }
+    });
+});
+</script>
+
+</body>
+</html>
+
+
+
+sd
+<?php
+include "db.php";
+$id=$_POST['id'];
+
+$sql="UPDATE users SET status=0 WHERE id='$id'";
+
+if(mysqli_query($conn,$sql)){
+    echo 1;
+}else{
+    echo 0;
+}
+?>
+
+
+trash
+
+<?php include "db.php"; ?>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Trash Users</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<h2>Trash Users</h2>
+<a href="index.php">Back To Active</a>
+
+<table border="1" cellpadding="10">
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Phone</th>
+<th>Action</th>
+</tr>
+
+<?php
+$sql="SELECT * FROM users WHERE status=0";
+$result=mysqli_query($conn,$sql);
+
+while($row=mysqli_fetch_assoc($result)){
+?>
+
+<tr id="row_<?php echo $row['id']; ?>">
+<td><?php echo $row['id']; ?></td>
+<td><?php echo $row['name']; ?></td>
+<td><?php echo $row['phone']; ?></td>
+<td>
+<button class="restore" data-id="<?php echo $row['id']; ?>">Restore</button>
+<button class="permanentDelete" data-id="<?php echo $row['id']; ?>">Delete Permanently</button>
+</td>
+</tr>
+
+<?php } ?>
+</table>
+
+<script>
+$(document).on("click",".restore",function(){
+    var id=$(this).data("id");
+    var row=$("#row_"+id);
+
+    $.post("restore.php",{id:id},function(res){
+        if(res==1){
+            row.fadeOut(500,function(){ $(this).remove(); });
+        }
+    });
+});
+
+$(document).on("click",".permanentDelete",function(){
+    var id=$(this).data("id");
+    var row=$("#row_"+id);
+
+    $.post("permanent_delete.php",{id:id},function(res){
+        if(res==1){
+            row.fadeOut(500,function(){ $(this).remove(); });
+        }
+    });
+});
+</script>
+
+</body>
+</html>
+
+
+
+
+restore 
+<?php
+include "db.php";
+$id=$_POST['id'];
+
+$sql="UPDATE users SET status=1 WHERE id='$id'";
+
+if(mysqli_query($conn,$sql)){
+    echo 1;
+}else{
+    echo 0;
+}
+?>
+
+permanent
+<?php
+include "db.php";
+$id=$_POST['id'];
+
+$sql="DELETE FROM users WHERE id='$id'";
+
+if(mysqli_query($conn,$sql)){
+    echo 1;
+}else{
+    echo 0;
+}
+?>
