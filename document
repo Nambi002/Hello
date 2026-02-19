@@ -141,6 +141,8 @@ $result = mysqli_query($conn, $query);
                 <td><?php echo $row['name']; ?></td>
                 <td><?php echo $row['phone']; ?></td>
                 <td>
+<a class="edit" href="edit.php?id=<?php echo $row['id']; ?>">Edit</a>
+
                     <a class="delete-btn" 
                        href="delete.php?id=<?php echo $row['id']; ?>" 
                        onclick="return confirm('Are you sure to delete?')">
@@ -195,3 +197,65 @@ if(isset($_GET['id'])) {
 header("Location: index.php");
 exit();
 ?>
+
+
+
+edit.php
+
+<?php
+include "db.php";
+
+$id = $_GET['id'];
+$query = "SELECT * FROM users WHERE id = $id";
+$result = mysqli_query($conn, $query);
+$row = mysqli_fetch_assoc($result);
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit User</title>
+</head>
+<body>
+
+<h2>Edit User</h2>
+
+<form action="update.php" method="POST">
+    <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
+
+    <label>Name:</label><br>
+    <input type="text" name="name" value="<?php echo $row['name']; ?>" required><br><br>
+
+    <label>Phone:</label><br>
+    <input type="text" name="phone" value="<?php echo $row['phone']; ?>" required><br><br>
+
+    <button type="submit" name="update">Update</button>
+</form>
+
+<br>
+<a href="index.php">Back to List</a>
+
+</body>
+</html>
+
+
+update.php
+<?php
+include "db.php";
+
+if(isset($_POST['update'])) {
+    $id = $_POST['id'];
+    $name = $_POST['name'];
+    $phone = $_POST['phone'];
+
+    $query = "UPDATE users 
+              SET name='$name', phone='$phone' 
+              WHERE id=$id";
+
+    mysqli_query($conn, $query);
+}
+
+header("Location: index.php");
+exit();
+?>
+
