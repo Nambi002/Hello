@@ -1,0 +1,197 @@
+CREATE DATABASE softdelete_demo;
+USE softdelete_demo;
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    is_deleted TINYINT(1) DEFAULT 0
+);
+
+INSERT INTO users (name, phone) VALUES
+('Ram', '9999999999'),
+('Sam', '8888888888'),
+('John', '7777777777');
+
+db.php
+
+<?php
+$host = "localhost";
+$user = "root";
+$pass = "";
+$db   = "softdelete_demo";
+
+$conn = mysqli_connect($host, $user, $pass, $db);
+
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+?>
+
+add.php
+
+<?php
+include "db.php";
+
+if(isset($_POST['submit'])) {
+    $name = $_POST['name'];
+    $phone = $_POST['phone'];
+
+    $query = "INSERT INTO users (name, phone) VALUES ('$name', '$phone')";
+    mysqli_query($conn, $query);
+
+    header("Location: index.php");
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add User</title>
+</head>
+<body>
+    <h2>Add User</h2>
+
+    <form method="POST">
+        <label>Name:</label><br>
+        <input type="text" name="name" required><br><br>
+
+        <label>Phone:</label><br>
+        <input type="text" name="phone" required><br><br>
+
+        <button type="submit" name="submit">Add User</button>
+    </form>
+
+    <br>
+    <a href="index.php">Go to List</a>
+</body>
+</html>
+
+
+index.php
+
+<?php
+include "db.php";
+
+// Fetch only non-deleted records
+$query = "SELECT * FROM users WHERE is_deleted = 0 ORDER BY id DESC";
+$result = mysqli_query($conn, $query);
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Soft Delete Example</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #f4f6f9;
+        }
+        table {
+            border-collapse: collapse;
+            width: 70%;
+            background: white;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background: #2c3e50;
+            color: white;
+        }
+        .delete-btn {
+            padding: 6px 12px;
+            background: red;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .add-btn {
+            padding: 8px 15px;
+            background: green;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>User List (Soft Delete - Frontend Only)</h2>
+
+<a class="add-btn" href="add.php">+ Add User</a>
+<br><br>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Action</th>
+    </tr>
+
+    <?php if(mysqli_num_rows($result) > 0) { ?>
+        <?php while($row = mysqli_fetch_assoc($result)) { ?>
+            <tr>
+                <td><?php echo $row['id']; ?></td>
+                <td><?php echo $row['name']; ?></td>
+                <td><?php echo $row['phone']; ?></td>
+                <td>
+                    <a class="delete-btn" 
+                       href="delete.php?id=<?php echo $row['id']; ?>" 
+                       onclick="return confirm('Are you sure to delete?')">
+                       Delete
+                    </a>
+                </td>
+            </tr>
+        <?php } ?>
+    <?php } else { ?>
+        <tr>
+            <td colspan="4">No Data Found</td>
+        </tr>
+    <?php } ?>
+</table>
+
+</body>
+</html>
+
+
+delete.php
+
+<?php
+include "db.php";
+
+if(isset($_GET['id'])) {
+    $id = $_GET['id'];
+
+    // Soft Delete (NOT permanent delete)
+    $query = "UPDATE users SET is_deleted = 1 WHERE id = '$id'";
+    mysqli_query($conn, $query);
+}
+
+// Redirect back to main page
+header("Location: index.php");
+exit();
+?>
+
+
+optional restore.php
+
+<?php
+include "db.php";
+
+if(isset($_GET['id'])) {
+    $id = $_GET['id'];
+
+    // Restore record
+    $query = "UPDATE users SET is_deleted = 0 WHERE id = '$id'";
+    mysqli_query($conn, $query);
+}
+
+header("Location: index.php");
+exit();
+?>
