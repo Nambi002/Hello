@@ -1,0 +1,209 @@
+STEP 1: Create Laravel Project
+
+Open terminal:
+
+composer create-project laravel/laravel simple-login
+cd simple-login
+php artisan serve
+
+Open browser:
+
+http://127.0.0.1:8000
+ STEP 2: Setup Database Connection
+
+Open .env file and change:
+
+DB_DATABASE=login_db
+DB_USERNAME=root
+DB_PASSWORD=
+
+Now create database in MySQL:
+
+CREATE DATABASE login_db;
+STEP 3: Create Users Table (Very Basic)
+
+Run this command:
+
+php artisan make:migration create_users_table
+
+Open migration file inside:
+database/migrations/xxxx_create_users_table.php
+
+Replace with this simple code:
+
+public function up()
+{
+    Schema::create('users', function (Blueprint $table) {
+        $table->id();
+        $table->string('username');
+        $table->string('password');
+        $table->timestamps();
+    });
+}
+
+Run migration:
+
+php artisan migrate
+ STEP 4: Insert Default Login Data (Important)
+
+Open MySQL (phpMyAdmin or terminal):
+
+INSERT INTO users (username, password) 
+VALUES ('admin', '1234');
+
+Now default login:
+
+Username: admin
+
+Password: 1234
+
+ STEP 5: Create Controller (Login Logic)
+
+Run:
+
+php artisan make:controller LoginController
+
+Open:
+app/Http/Controllers/LoginController.php
+
+Paste this beginner-friendly code:
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class LoginController extends Controller
+{
+    // Show Login Page
+    public function index()
+    {
+        return view('login');
+    }
+
+    // Check Login
+    public function checkLogin(Request $request)
+    {
+        $username = $request->username;
+        $password = $request->password;
+
+        // Check in database
+        $user = DB::table('users')
+            ->where('username', $username)
+            ->where('password', $password)
+            ->first();
+
+        if ($user) {
+            return redirect('/home'); // success page
+        } else {
+            return back()->with('error', 'Login Failed! Wrong Username or Password');
+        }
+    }
+
+    // Next Page after login
+    public function home()
+    {
+        return view('home');
+    }
+}
+STEP 6: Create Routes (Very Important)
+
+Open:
+routes/web.php
+
+Replace with:
+
+use App\Http\Controllers\LoginController;
+
+Route::get('/', [LoginController::class, 'index']);
+Route::post('/login', [LoginController::class, 'checkLogin']);
+Route::get('/home', [LoginController::class, 'home']);
+
+This means:
+
+/ → login page
+
+/login → login check
+
+/home → next page after success
+
+STEP 7: Create Login Page (View)
+
+Create file:
+resources/views/login.blade.php
+
+Paste:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Login</title>
+</head>
+<body>
+
+<h2>Login Form</h2>
+
+<!-- Error Message -->
+@if(session('error'))
+    <p style="color:red;">{{ session('error') }}</p>
+@endif
+
+<form method="POST" action="/login">
+    @csrf
+
+    <label>Username:</label><br>
+    <input type="text" name="username" required><br><br>
+
+    <label>Password:</label><br>
+    <input type="password" name="password" required><br><br>
+
+    <button type="submit">Login</button>
+</form>
+
+</body>
+</html>
+STEP 8: Create Next Page (After Login Success)
+
+Create file:
+resources/views/home.blade.php
+
+Paste:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home Page</title>
+</head>
+<body>
+
+<h2>Login Successful </h2>
+<p>Welcome to Next Page (Home)</p>
+
+</body>
+</html>
+
+
+FINAL TEST
+
+Start server:
+
+php artisan serve
+
+Open:
+
+http://127.0.0.1:8000
+Correct Login:
+
+Username: admin
+
+Password: 1234
+➡ Redirect to Home Page
+
+Wrong Login:
+
+Stay on same page
+
+Show error: Login Failed!
+
