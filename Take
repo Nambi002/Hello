@@ -1,0 +1,185 @@
+<style>
+.password-box {
+    position: relative;
+    width: 300px;
+}
+
+.password-box input {
+    width: 100%;
+    padding: 10px;
+    padding-right: 40px;
+}
+
+.password-box i {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: gray;
+}
+</style>
+
+<label>Password:</label><br>
+<div class="password-box">
+    <input type="password" id="loginPassword" name="password" required>
+    <i class="fa-solid fa-eye" onclick="toggleLoginPassword()"></i>
+</div>
+<br><br>
+
+------STEP 1: Add Font Awesome (Eye Icon Library)
+
+Open your login.blade.php and register.blade.php
+Add this inside <head> section:
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+ STEP 2: Login Page – Eye Icon Inside Password Input
+
+Update your password field in
+resources/views/login.blade.php
+
+<style>
+.password-box {
+    position: relative;
+    width: 300px;
+}
+
+.password-box input {
+    width: 100%;
+    padding: 10px;
+    padding-right: 40px;
+}
+
+.password-box i {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: gray;
+}
+</style>
+
+<label>Password:</label><br>
+<div class="password-box">
+    <input type="password" id="loginPassword" name="password" required>
+    <i class="fa-solid fa-eye" onclick="toggleLoginPassword()"></i>
+</div>
+<br><br>
+
+Add this script before </body>:
+
+<script>
+function toggleLoginPassword() {
+    var pass = document.getElementById("loginPassword");
+    var icon = event.target;
+
+    if (pass.type === "password") {
+        pass.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        pass.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+</script>
+ STEP 3: Register Page – Eye Icon for Both Password Fields
+
+Open:
+resources/views/register.blade.php
+
+Replace password section:
+
+<style>
+.password-box {
+    position: relative;
+    width: 300px;
+}
+
+.password-box input {
+    width: 100%;
+    padding: 10px;
+    padding-right: 40px;
+}
+
+.password-box i {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: gray;
+}
+</style>
+
+<label>New Password:</label><br>
+<div class="password-box">
+    <input type="password" id="password" name="password">
+    <i class="fa-solid fa-eye" onclick="togglePassword('password', this)"></i>
+</div>
+@error('password')
+<span style="color:red;">{{ $message }}</span>
+@enderror
+<br><br>
+
+<label>Confirm New Password:</label><br>
+<div class="password-box">
+    <input type="password" id="confirmPassword" name="password_confirmation">
+    <i class="fa-solid fa-eye" onclick="togglePassword('confirmPassword', this)"></i>
+</div>
+<br><br>
+
+Add this script before </body>:
+
+<script>
+function togglePassword(fieldId, icon) {
+    var input = document.getElementById(fieldId);
+
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+</script>
+ FINAL RESULT OUTPUT (UI IMAGE PREVIEW)
+ Login Page
+Username:  [______________]
+
+Password:  [ ************ 👁️ ]
+                      ↑
+              Eye icon inside input
+
+Click 👁️ → password becomes visible
+Click again → hidden (********)
+
+Register Page
+New Password:          [ ************ 👁️ ]
+
+Confirm New Password:  [ ************ 👁️ ]
+ Professional UI Tips (For Portfolio & Interviews)
+
+This feature shows:
+
+Good UX knowledge
+
+Frontend + Backend integration
+
+Real-world form design skills (useful for Django/Laravel jobs)
+
+Next powerful feature (real company standard):
+ Disable Login button until valid input
+OR
+ Show password strength meter (Weak/Medium/Strong)
+
+Which one do you want next?Password Strength Meter
+ Disable button until valid form
+ Remember Me checkbox (session login)
+
+Do you like this personality?
