@@ -1,0 +1,163 @@
+controller 
+
+public function register(Request $request)
+{
+    $request->validate([
+        'username' => 'required|min:3|unique:users,username',
+        'email' => 'required|email|unique:users,email',
+        'phone' => 'required|digits_between:10,12',
+        'password' => 'required|min:6|confirmed'
+    ]);
+
+    DB::table('users')->insert([
+        'username' => $request->username,
+        'email' => $request->email,
+        'phone' => $request->phone,
+        'password' => $request->password
+    ]);
+
+    return redirect('/')->with('success', 'Registration Successful! Please Login');
+}
+
+reg.blade.php. 
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register Page</title>
+</head>
+<body>
+
+<h2>Register Form</h2>
+
+<form method="POST" action="/register">
+    @csrf
+
+    <label>Username:</label><br>
+    <input type="text" name="username" value="{{ old('username') }}"><br>
+    @error('username')
+        <span style="color:red;">{{ $message }}</span>
+    @enderror
+    <br><br>
+
+    <label>Email:</label><br>
+    <input type="email" name="email" value="{{ old('email') }}"><br>
+    @error('email')
+        <span style="color:red;">{{ $message }}</span>
+    @enderror
+    <br><br>
+
+    <label>Phone Number:</label><br>
+    <input type="text" name="phone" value="{{ old('phone') }}"><br>
+    @error('phone')
+        <span style="color:red;">{{ $message }}</span>
+    @enderror
+    <br><br>
+
+    <label>Password:</label><br>
+    <input type="password" name="password"><br>
+    @error('password')
+        <span style="color:red;">{{ $message }}</span>
+    @enderror
+    <br><br>
+
+    <label>Confirm Password:</label><br>
+    <input type="password" name="password_confirmation"><br><br>
+
+    <button type="submit">Register</button>
+</form>
+
+<br>
+<p>Already have an account?
+    <a href="/">Login Here</a>
+</p>
+
+</body>
+</html>
+
+
+new pwd -- logincontroller.php
+
+public function register(Request $request)
+{
+    $request->validate([
+        'username' => 'required|min:3|unique:users,username',
+        'email' => 'required|email|unique:users,email',
+        'phone' => 'required|digits_between:10,12',
+        'password' => 'required|min:6|confirmed'
+    ]);
+
+    DB::table('users')->insert([
+        'username' => $request->username,
+        'email' => $request->email,
+        'phone' => $request->phone,
+        'password' => $request->password
+    ]);
+
+    return redirect('/')->with('success', 'Registration Successful! Please Login');
+}
+
+reg.b.php
+<label>New Password:</label><br>
+<input type="password" name="password"><br>
+@error('password')
+    <span style="color:red;">{{ $message }}</span>
+@enderror
+<br><br>
+
+<label>Confirm New Password:</label><br>
+<input type="password" name="password_confirmation"><br><br>
+
+
+
+
+
+logincontroller
+
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+
+
+
+hask pwd reg.php
+public function register(Request $request)
+{
+    $request->validate([
+        'username' => 'required|min:3|unique:users,username',
+        'email' => 'required|email|unique:users,email',
+        'phone' => 'required|digits_between:10,12',
+        'password' => 'required|min:6|confirmed'
+    ]);
+
+    DB::table('users')->insert([
+        'username' => $request->username,
+        'email' => $request->email,
+        'phone' => $request->phone,
+        'password' => Hash::make($request->password) // 🔒 HASHED
+    ]);
+
+    return redirect('/')->with('success', 'Registration Successful! Please Login');
+}
+
+
+login.php hask pwd
+
+public function checkLogin(Request $request)
+{
+    $request->validate([
+        'username' => 'required',
+        'password' => 'required'
+    ]);
+
+    $user = DB::table('users')
+        ->where('username', $request->username)
+        ->first();
+
+    // Check hashed password
+    if ($user && Hash::check($request->password, $user->password)) {
+        return redirect('/home')->with('success', 'Login Successful');
+    } else {
+        return back()->with('error', 'Invalid Username or Password');
+    }
+}
