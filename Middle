@@ -1,0 +1,257 @@
+
+a complete structured plan + folder architecture + code flow so you can finish il
+
+Routes separation (User / Admin)
+
+Middleware (Session check)
+
+Auth logic (separate login)
+
+Profile edit
+
+Change password (hashed)
+
+Admin verification system
+
+Active / Inactive users
+
+Session handling
+
+Header with logo + logout
+
+ Overall System Architecture (Important)
+Two Panels:
+User Panel
+
+Admin Panel
+
+Core Logic:
+User registers → Goes to Unverified Users
+
+Admin verifies → User can login
+
+Admin can deactivate → Moves to Deleted/Inactive Users
+
+ Step 1: Laravel Project Structure
+Inside your Laravel project:
+
+app/
+ ├── Http/
+ │   ├── Controllers/
+ │   │   ├── User/
+ │   │   │    AuthController.php
+ │   │   │    ProfileController.php
+ │   │   ├── Admin/
+ │   │        AdminAuthController.php
+ │   │        UserManagementController.php
+ │   ├── Middleware/
+ │        UserAuthMiddleware.php
+ │        AdminAuthMiddleware.php
+🗄️ Step 2: Database Design (Very Important)
+Create Users Table (Custom)
+
+Migration
+php artisan make:migration create_users_table
+users table fields:
+Schema::create('users', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->string('mobile')->unique();
+    $table->string('email')->unique();
+    $table->string('password');
+    $table->string('profile_image')->nullable();
+    $table->enum('role', ['user', 'admin'])->default('user');
+    $table->enum('status', ['unverified', 'verified', 'inactive'])->default('unverified');
+    $table->timestamps();
+});
+Then run:
+
+php artisan migrate
+ Step 3: Route Separation (User & Admin)
+routes/web.php
+use App\Http\Controllers\User\AuthController;
+use App\Http\Controllers\User\ProfileController;
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\UserManagementController;
+
+/*
+|--------------------------------------------------------------------------
+| USER ROUTES
+|--------------------------------------------------------------------------
+*/
+Route::prefix('user')->group(function () {
+
+    Route::get('/register', [AuthController::class, 'showRegister']);
+    Route::post('/register', [AuthController::class, 'register']);
+
+    Route::get('/login', [AuthController::class, 'showLogin']);
+    Route::post('/login', [AuthController::class, 'login']);
+
+    Route::middleware(['user.auth'])->group(function () {
+        Route::get('/profile', [ProfileController::class, 'editProfile']);
+        Route::post('/profile/update', [ProfileController::class, 'updateProfile']);
+        Route::get('/change-password', [ProfileController::class, 'changePasswordForm']);
+        Route::post('/change-password', [ProfileController::class, 'changePassword']);
+        Route::get('/logout', [AuthController::class, 'logout']);
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')->group(function () {
+
+    Route::get('/login', [AdminAuthController::class, 'showLogin']);
+    Route::post('/login', [AdminAuthController::class, 'login']);
+
+    Route::middleware(['admin.auth'])->group(function () {
+        Route::get('/unverified-users', [UserManagementController::class, 'unverified']);
+        Route::get('/verified-users', [UserManagementController::class, 'verified']);
+        Route::get('/inactive-users', [UserManagementController::class, 'inactive']);
+        Route::get('/verify/{id}', [UserManagementController::class, 'verifyUser']);
+        Route::get('/inactive/{id}', [UserManagementController::class, 'inactiveUser']);
+        Route::get('/logout', [AdminAuthController::class, 'logout']);
+    });
+});
+ Step 4: Middleware (Session Token Check)
+Create Middleware
+php artisan make:middleware UserAuthMiddleware
+php artisan make:middleware AdminAuthMiddleware
+UserAuthMiddleware
+public function handle($request, Closure $next)
+{
+    if (!session()->has('user_id')) {
+        return redirect('/user/login');
+    }
+    return $next($request);
+}
+AdminAuthMiddleware
+public function handle($request, Closure $next)
+{
+    if (!session()->has('admin_id')) {
+        return redirect('/admin/login');
+    }
+    return $next($request);
+}
+Register in Kernel:
+
+'user.auth' => \App\Http\Middleware\UserAuthMiddleware::class,
+'admin.auth' => \App\Http\Middleware\AdminAuthMiddleware::class,
+ Step 5: User Register Logic (With Verification Status)
+AuthController.php (User)
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+public function register(Request $request)
+{
+    User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'mobile' => $request->mobile,
+        'password' => Hash::make($request->password),
+        'status' => 'unverified'
+    ]);
+
+    return redirect('/user/login')->with('msg', 'Registered! Wait for admin verification.');
+}
+ Step 6: User Login (Prevent Admin Login)
+public function login(Request $request)
+{
+    $user = User::where('email', $request->email)
+        ->where('role', 'user')
+        ->first();
+
+    if ($user && Hash::check($request->password, $user->password)) {
+
+        if ($user->status != 'verified') {
+            return back()->with('error', 'Account not verified by admin');
+        }
+
+        session(['user_id' => $user->id]);
+        return redirect('/user/profile');
+    }
+
+    return back()->with('error', 'Invalid Credentials');
+}
+ Step 7: Admin Login (Block Users)
+public function login(Request $request)
+{
+    $admin = User::where('email', $request->email)
+        ->where('role', 'admin')
+        ->first();
+
+    if ($admin && Hash::check($request->password, $admin->password)) {
+        session(['admin_id' => $admin->id]);
+        return redirect('/admin/unverified-users');
+    }
+
+    return back()->with('error', 'Admin login only');
+}
+ Step 8: Edit Profile (Only Name, Mobile, Profile Pic)
+public function updateProfile(Request $request)
+{
+    $user = User::find(session('user_id'));
+
+    if ($request->hasFile('profile_image')) {
+        $file = $request->file('profile_image')->store('profiles', 'public');
+        $user->profile_image = $file;
+    }
+
+    $user->name = $request->name;
+    $user->mobile = $request->mobile;
+    $user->save();
+
+    return back()->with('success', 'Profile Updated');
+}
+ Step 9: Change Password (Secure - Interview Level)
+public function changePassword(Request $request)
+{
+    $user = User::find(session('user_id'));
+
+    if (!Hash::check($request->current_password, $user->password)) {
+        return back()->with('error', 'Current password incorrect');
+    }
+
+    if ($request->new_password != $request->confirm_password) {
+        return back()->with('error', 'Passwords do not match');
+    }
+
+    $user->password = Hash::make($request->new_password);
+    $user->save();
+
+    return back()->with('success', 'Password Changed Successfully');
+}
+ Step 10: Admin Panel – User Management
+Unverified Users
+public function unverified()
+{
+    $users = User::where('status', 'unverified')->get();
+    return view('admin.unverified', compact('users'));
+}
+Verify User
+public function verifyUser($id)
+{
+    User::where('id', $id)->update(['status' => 'verified']);
+    return back();
+}
+Inactive User (Soft Delete Logic)
+public function inactiveUser($id)
+{
+    User::where('id', $id)->update(['status' => 'inactive']);
+    return back();
+}
+🧾 Step 11: Header Layout (Common for User & Admin)
+Create:
+
+resources/views/layouts/header.blade.php
+<div style="display:flex; justify-content:space-between; padding:15px; background:#eee;">
+    <div>
+        <img src="/logo.png" width="120">
+    </div>
+    <div>
+        <a href="{{ url('logout') }}">Logout</a>
+    </div>
+</div>
+Include in all pages:
