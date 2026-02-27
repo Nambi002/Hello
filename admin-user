@@ -1,0 +1,1259 @@
+Admin Sidebar Pages:
+
+Unverified Users
+
+Verified Users
+
+Deleted / Inactive Users
+
+Verify Button
+
+Inactive Button
+
+
+
+Everything step-by-step (beginner friendly).
+
+STEP 1: Protect Admin Pages (Middleware)
+
+First create middleware:
+
+php artisan make:middleware AdminAuthMiddleware
+
+Open:
+
+app/Http/Middleware/AdminAuthMiddleware.php
+
+Replace code:
+
+public function handle($request, Closure $next)
+{
+    if (!session()->has('admin_logged_in')) {
+        return redirect('/admin/login');
+    }
+
+    return $next($request);
+}
+
+Now register middleware.
+
+Open:
+
+app/Http/Kernel.php
+
+Inside $routeMiddleware add:
+
+'admin.auth' => \App\Http\Middleware\AdminAuthMiddleware::class,
+ STEP 2: Update Admin Routes
+
+Open:
+
+routes/web.php
+
+Replace admin section with:
+
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\UserManagementController;
+
+Route::prefix('admin')->group(function () {
+
+    Route::get('/login', [AdminAuthController::class, 'showLogin']);
+    Route::post('/login', [AdminAuthController::class, 'login']);
+    Route::get('/logout', [AdminAuthController::class, 'logout']);
+
+    Route::middleware(['admin.auth'])->group(function () {
+
+        Route::get('/dashboard', function () {
+            return view('admin.dashboard');
+        });
+
+        Route::get('/unverified-users', [UserManagementController::class, 'unverified']);
+        Route::get('/verified-users', [UserManagementController::class, 'verified']);
+        Route::get('/inactive-users', [UserManagementController::class, 'inactive']);
+
+        Route::get('/verify/{id}', [UserManagementController::class, 'verifyUser']);
+        Route::get('/inactive/{id}', [UserManagementController::class, 'inactiveUser']);
+    });
+});
+ STEP 3: Create UserManagementController
+
+If not created:
+
+php artisan make:controller Admin/UserManagementController
+
+Open:
+
+app/Http/Controllers/Admin/UserManagementController.php
+
+Add this:
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+
+class UserManagementController extends Controller
+{
+    // Unverified Users
+    public function unverified()
+    {
+        $users = User::where('status', 'unverified')->get();
+        return view('admin.unverified', compact('users'));
+    }
+
+    // Verified Users
+    public function verified()
+    {
+        $users = User::where('status', 'verified')->get();
+        return view('admin.verified', compact('users'));
+    }
+
+    // Inactive Users
+    public function inactive()
+    {
+        $users = User::where('status', 'inactive')->get();
+        return view('admin.inactive', compact('users'));
+    }
+
+    // Verify User
+    public function verifyUser($id)
+    {
+        User::where('id', $id)->update(['status' => 'verified']);
+        return back();
+    }
+
+    // Inactive User
+    public function inactiveUser($id)
+    {
+        User::where('id', $id)->update(['status' => 'inactive']);
+        return back();
+    }
+}
+ STEP 4: Create Admin Layout (Header + Sidebar)
+
+Create:
+
+resources/views/admin/layout.blade.php
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+
+<div style="display:flex;">
+
+    <!-- Sidebar -->
+    <div style="width:200px; background:#f2f2f2; padding:15px;">
+        <h3>Admin Panel</h3>
+
+        <a href="/admin/unverified-users">Unverified Users</a><br><br>
+        <a href="/admin/verified-users">Verified Users</a><br><br>
+        <a href="/admin/inactive-users">Deleted / Inactive Users</a><br><br>
+        <a href="/admin/logout" style="color:red;">Logout</a>
+    </div>
+
+    <!-- Content -->
+    <div style="flex:1; padding:20px;">
+        @yield('content')
+    </div>
+
+</div>
+
+</body>
+</html>
+STEP 5: Create Unverified Users Page
+
+Create:
+
+resources/views/admin/unverified.blade.php
+
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Unverified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <a href="/admin/verify/{{ $user->id }}">Verify</a>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+ STEP 6: Verified Users Page
+
+Create:
+
+resources/views/admin/verified.blade.php
+
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Verified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <a href="/admin/inactive/{{ $user->id }}">Inactive</a>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+ STEP 7: Inactive Users Page
+
+Create:
+
+resources/views/admin/inactive.blade.php
+
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Deleted / Inactive Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+ FINAL FLOW (Now Working)
+
+
+
+Now we must complete:
+
+User Dashboard
+
+User Middleware
+
+Edit Profile
+
+Change Password
+
+Proper Header with Logo + Logout
+
+
+You want TWO SEPARATE LOGIN SYSTEMS:
+----------------------------------------------------------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+final recent structure ( 1 ) 
+----------------------------------------------------------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+-----------------------------------------------
+==FINAL SYSTEM STRUCTURE
+== ADMIN SIDE
+
+Login (default fixed credentials)
+
+After login → Admin Dashboard
+
+Sidebar:
+
+Unverified Users
+
+Verified Users
+
+Inactive / Deleted Users
+
+Top Right:
+
+Logout
+
+Flow:
+
+User registers → goes to Unverified
+
+Admin verifies → moves to Verified
+
+Admin soft deletes → moves to Inactive
+
+== USER SIDE
+
+Pages:
+
+Register
+
+Login
+
+After Login → User Dashboard
+
+Top:
+
+Logo (left)
+
+Logout (right)
+
+User Dashboard options:
+
+Edit Profile
+
+Change Password
+
+Logout
+
+Now I will give you the CLEAN ARCHITECTURE.
+
+=== DATABASE STRUCTURE (Very Important)
+
+Your users table must contain:
+
+$table->id();
+$table->string('name');
+$table->string('email')->unique();
+$table->string('mobile')->unique();
+$table->string('password');
+$table->string('profile_image')->nullable();
+$table->enum('status', ['unverified','verified','inactive'])->default('unverified');
+$table->timestamps();
+
+⚠ We do NOT need role column because:
+
+Admin is fixed (not from DB)
+
+Only users stored in DB
+
+== ADMIN LOGIN (FIXED)
+
+In AdminAuthController:
+
+public function login(Request $request)
+{
+    if ($request->email == 'admin@gmail.com' &&
+        $request->password == 'admin123') {
+
+        session(['admin' => true]);
+
+        return redirect('/admin/unverified-users');
+    }
+
+    return back()->with('error', 'Invalid Admin Credentials');
+}
+
+Admin does NOT use database.
+
+== USER REGISTER FLOW
+
+When user registers:
+
+User::create([
+    'name' => $request->name,
+    'email' => $request->email,
+    'mobile' => $request->mobile,
+    'password' => Hash::make($request->password),
+    'status' => 'unverified'
+]);
+
+Automatically goes to → Unverified Users page (admin side)
+
+=== USER LOGIN FLOW
+$user = User::where('email', $request->email)->first();
+
+if(!$user){
+    return back()->with('error','User not found');
+}
+
+if(!Hash::check($request->password, $user->password)){
+    return back()->with('error','Wrong password');
+}
+
+if($user->status != 'verified'){
+    return back()->with('error','Wait for admin approval');
+}
+
+session(['user_id' => $user->id]);
+
+return redirect('/user/dashboard');
+
+Only VERIFIED users can login 
+
+=== ADMIN PANEL SIDEBAR STRUCTURE
+
+admin/layout.blade.php
+
+<div style="display:flex;">
+
+    <div style="width:200px;background:#eee;padding:15px;">
+        <h3>Admin Panel</h3>
+
+        <a href="/admin/unverified-users">Unverified Users</a><br><br>
+        <a href="/admin/verified-users">Verified Users</a><br><br>
+        <a href="/admin/inactive-users">Inactive Users</a><br><br>
+
+        <a href="/admin/logout" style="color:red;">Logout</a>
+    </div>
+
+    <div style="flex:1;padding:20px;">
+        @yield('content')
+    </div>
+
+</div>
+
+=== ADMIN FUNCTIONS
+
+Unverified Users
+User::where('status','unverified')->get();
+
+Button:
+
+Verify
+Verify Function
+User::where('id',$id)->update(['status'=>'verified']);
+
+Moves to Verified page automatically.
+
+Verified Users Page
+User::where('status','verified')->get();
+
+Button:
+
+Inactive
+Soft Delete (Inactive Concept)
+
+Instead of deleting:
+
+User::where('id',$id)->update(['status'=>'inactive']);
+Inactive Users Page
+User::where('status','inactive')->get();
+
+Soft delete concept complete 
+
+=== USER DASHBOARD STRUCTURE
+
+After login → /user/dashboard
+
+user/layout.blade.php
+
+<div style="display:flex;justify-content:space-between;background:#eee;padding:10px;">
+    <div>
+        <h3>LOGO</h3>
+    </div>
+
+    <div>
+        <a href="/user/logout">Logout</a>
+    </div>
+</div>
+
+<hr>
+
+<div style="padding:20px;">
+    <a href="/user/edit">Edit Profile</a> |
+    <a href="/user/change-password">Change Password</a>
+</div>
+
+Only 3 options:
+
+Edit
+
+Change Password
+
+Logout
+
+USER EDIT PROFILE
+
+Allow update:
+
+Name
+
+Mobile
+
+Profile Image
+
+ USER CHANGE PASSWORD
+
+Fields:
+
+Current Password
+
+New Password
+
+Confirm Password
+
+Check:
+
+Current password correct
+
+New & confirm match
+
+Then update with Hash::make()
+
+SESSION CONTROL
+
+Admin Middleware:
+
+if(!session()->has('admin'))
+
+User Middleware:
+
+if(!session()->has('user_id'))
+
+Logout:
+
+session()->flush();
+ FINAL COMPLETE FLOW
+User
+
+Register → Unverified
+Admin verifies → Verified
+User login → Dashboard
+Edit / Change Password / Logout
+
+Admin
+
+Login (fixed)
+Sidebar:
+
+Unverified
+
+Verified
+
+Inactive
+
+Logout
+
+Soft delete using status column
+
+
+
+
+
+
+
+ Admin Login (default fixed)
+ User Login (dynamic from DB)
+
+-----------------------
+-----------------------------------------------
+------------------------
+from recent unwards ( 2 )
+-----------------------
+-----------------------------------------------
+------------------------
+
+Admin Sidebar
+
+Unverified Users Page
+
+Verify Button
+
+Verified Users Page
+
+Inactive (Soft Delete)
+
+Inactive Users Page
+
+Admin Logout in top right
+
+I will not rush. One step at a time.
+
+STEP 1: Make Sure Your users Table Has Status Column
+
+Open migration and confirm you have:
+
+$table->enum('status',['unverified','verified','inactive'])
+      ->default('unverified');
+
+If not present, add it and run:
+
+php artisan migrate:fresh
+
+⚠ This deletes old data. Only use if testing.
+
+STEP 2: When User Registers → Save as Unverified
+
+Open:
+
+User/AuthController.php
+
+Inside register method confirm:
+
+User::create([
+    'name' => $request->name,
+    'email' => $request->email,
+    'mobile' => $request->mobile,
+    'password' => Hash::make($request->password),
+    'status' => 'unverified'
+]);
+
+Now every new user automatically goes to:
+
+ Unverified list (Admin side)
+
+ STEP 3: Create Admin Middleware (Protect Admin Pages)
+
+Run:
+
+php artisan make:middleware AdminMiddleware
+
+Open:
+
+app/Http/Middleware/AdminMiddleware.php
+
+Replace with:
+
+public function handle($request, Closure $next)
+{
+    if (!session()->has('admin')) {
+        return redirect('/admin/login');
+    }
+
+    return $next($request);
+}
+
+Now register middleware.
+
+Open:
+
+app/Http/Kernel.php
+
+Inside $routeMiddleware add:
+
+'admin.auth' => \App\Http\Middleware\AdminMiddleware::class,
+ STEP 4: Protect Admin Routes
+
+Open:
+
+routes/web.php
+
+Change admin routes to:
+
+Route::prefix('admin')->group(function () {
+
+    Route::get('/login', [AdminAuthController::class, 'showLogin']);
+    Route::post('/login', [AdminAuthController::class, 'login']);
+    Route::get('/logout', [AdminAuthController::class, 'logout']);
+
+    Route::middleware(['admin.auth'])->group(function () {
+
+        Route::get('/unverified-users', [UserManagementController::class, 'unverified']);
+        Route::get('/verified-users', [UserManagementController::class, 'verified']);
+        Route::get('/inactive-users', [UserManagementController::class, 'inactive']);
+
+        Route::get('/verify/{id}', [UserManagementController::class, 'verifyUser']);
+        Route::get('/inactive/{id}', [UserManagementController::class, 'inactiveUser']);
+    });
+});
+ STEP 5: Create UserManagementController
+
+If not created:
+
+php artisan make:controller Admin/UserManagementController
+
+Open:
+
+app/Http/Controllers/Admin/UserManagementController.php
+
+Add this full code:
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+
+class UserManagementController extends Controller
+{
+    public function unverified()
+    {
+        $users = User::where('status','unverified')->get();
+        return view('admin.unverified', compact('users'));
+    }
+
+    public function verified()
+    {
+        $users = User::where('status','verified')->get();
+        return view('admin.verified', compact('users'));
+    }
+
+    public function inactive()
+    {
+        $users = User::where('status','inactive')->get();
+        return view('admin.inactive', compact('users'));
+    }
+
+    public function verifyUser($id)
+    {
+        User::where('id',$id)->update(['status'=>'verified']);
+        return back();
+    }
+
+    public function inactiveUser($id)
+    {
+        User::where('id',$id)->update(['status'=>'inactive']);
+        return back();
+    }
+}
+ STEP 6: Create Admin Layout (Sidebar + Logout Right)
+
+Create:
+
+resources/views/admin/layout.blade.php
+
+Paste:
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+
+<div style="display:flex; justify-content:space-between; background:#eee; padding:10px;">
+    <div><b>ADMIN PANEL</b></div>
+    <div><a href="/admin/logout">Logout</a></div>
+</div>
+
+<div style="display:flex;">
+
+    <div style="width:200px; background:#f5f5f5; padding:15px;">
+        <a href="/admin/unverified-users">Unverified Users</a><br><br>
+        <a href="/admin/verified-users">Verified Users</a><br><br>
+        <a href="/admin/inactive-users">Inactive Users</a>
+    </div>
+
+    <div style="flex:1; padding:20px;">
+        @yield('content')
+    </div>
+
+</div>
+
+</body>
+</html>
+
+STEP 7: Create Unverified Page
+
+Create:
+
+resources/views/admin/unverified.blade.php
+
+Paste:
+
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Unverified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <a href="/admin/verify/{{ $user->id }}">Verify</a>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+
+ STEP 8: Create Verified Page
+
+resources/views/admin/verified.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Verified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <a href="/admin/inactive/{{ $user->id }}">Inactive</a>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+
+ STEP 9: Create Inactive Page
+
+resources/views/admin/inactive.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Inactive Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+
+-------------------------
+NOW TEST FULL FLOW
+
+Register new user
+
+Login as admin
+
+Go to Unverified
+
+Click Verify
+
+Go to Verified
+
+Click Inactive
+
+Go to Inactive page
+
+ Your Admin Panel Complete
+ Soft Delete Concept Working
+ Sidebar Working
+Logout Working
+
+
+
+Shall we continue to User Dashboard + Edit + Change Password (Step-by-Step)?
+
+Okay, now give you a first onwards. first login onwards, give me step-by-step process.
+
+
+Now we start from beginning (Login onwards) and build everything step-by-step like a beginner.
+Do exactly as I say and test each step before moving.
+
+FINAL TARGET
+
+----------------------------------------------
+------------------------
+-----------------------------------------------
+------------------------
+first full fetch from login
+------------------------------------------
+-----------------------------------------------
+------------------------
+----------------
+
+
+We will build:
+
+USER SIDE
+
+Register
+
+Login
+
+After login → Dashboard
+
+Edit Profile
+
+Change Password
+
+Logout
+
+ ADMIN SIDE
+
+Default Login
+
+Sidebar:
+
+Unverified Users
+
+Verified Users
+
+Inactive Users
+
+Verify Button
+
+Inactive Button (Soft delete)
+
+Logout
+--------------------------
+STEP 1 — USER REGISTER
+
+1. Route
+
+Open routes/web.php
+
+use App\Http\Controllers\User\AuthController;
+
+Route::get('/register', [AuthController::class, 'showRegister']);
+Route::post('/register', [AuthController::class, 'register']);
+
+2.Register Page
+
+Create:
+
+resources/views/user/register.blade.php
+
+<h2>User Register</h2>
+
+<form method="POST" action="/register">
+    @csrf
+    Name: <input type="text" name="name"><br><br>
+    Email: <input type="email" name="email"><br><br>
+    Mobile: <input type="text" name="mobile"><br><br>
+    Password: <input type="password" name="password"><br><br>
+
+    <button type="submit">Register</button>
+</form>
+
+<a href="/login">Already have account? Login</a>
+
+3.Controller Logic
+
+Open:
+
+app/Http/Controllers/User/AuthController.php
+
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+public function showRegister()
+{
+    return view('user.register');
+}
+
+public function register(Request $request)
+{
+    User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'mobile' => $request->mobile,
+        'password' => Hash::make($request->password),
+        'status' => 'unverified'
+    ]);
+
+    return redirect('/login')->with('success','Registered. Wait for admin approval.');
+}
+
+
+It goes into DB as unverified
+
+ STEP 2 — USER LOGIN
+
+1. Routes
+Route::get('/login', [AuthController::class, 'showLogin']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/logout', [AuthController::class, 'logout']);
+
+2.Login Page
+
+Create:
+
+resources/views/user/login.blade.php
+
+<h2>User Login</h2>
+
+@if(session('error'))
+<p style="color:red;">{{ session('error') }}</p>
+@endif
+
+<form method="POST" action="/login">
+    @csrf
+    Email: <input type="email" name="email"><br><br>
+    Password: <input type="password" name="password"><br><br>
+
+    <button type="submit">Login</button>
+</form>
+
+3. Login Logic
+
+In AuthController:
+
+public function showLogin()
+{
+    return view('user.login');
+}
+
+public function login(Request $request)
+{
+    $user = User::where('email',$request->email)->first();
+
+    if(!$user){
+        return back()->with('error','User not found');
+    }
+
+    if(!Hash::check($request->password,$user->password)){
+        return back()->with('error','Wrong password');
+    }
+
+    if($user->status != 'verified'){
+        return back()->with('error','Wait for admin verification');
+    }
+
+    session(['user_id'=>$user->id]);
+
+    return redirect('/dashboard');
+}
+
+public function logout()
+{
+    session()->forget('user_id');
+    return redirect('/login');
+}
+
+ STEP 3 — USER DASHBOARD
+
+1.Route
+
+Route::get('/dashboard', function(){
+    return view('user.dashboard');
+});
+
+2. Dashboard Page
+
+Create:
+
+resources/views/user/dashboard.blade.php
+
+<div style="display:flex; justify-content:space-between; background:#eee; padding:10px;">
+    <div><b>LOGO</b></div>
+    <div><a href="/logout">Logout</a></div>
+</div>
+
+<hr>
+
+<h3>User Dashboard</h3>
+
+<a href="/edit-profile">Edit Profile</a> |
+<a href="/change-password">Change Password</a>
+
+----------
+
+
+ STEP 4 — PROTECT DASHBOARD (Middleware)
+
+
+Run:
+
+php artisan make:middleware UserMiddleware
+
+Open:
+
+app/Http/Middleware/UserMiddleware.php
+
+public function handle($request, Closure $next)
+{
+    if(!session()->has('user_id')){
+        return redirect('/login');
+    }
+
+    return $next($request);
+}
+
+Register in Kernel.php:
+
+'user.auth' => \App\Http\Middleware\UserMiddleware::class,
+
+Now protect routes:
+
+Route::middleware(['user.auth'])->group(function(){
+
+    Route::get('/dashboard', function(){
+        return view('user.dashboard');
+    });
+
+});
+
+
+
+
+STEP 5 — EDIT PROFILE
+
+
+Routes
+Route::get('/edit-profile',[ProfileController::class,'edit']);
+Route::post('/update-profile',[ProfileController::class,'update']);
+Controller
+
+Create:
+
+php artisan make:controller User/ProfileController
+
+Inside:
+
+use App\Models\User;
+
+public function edit()
+{
+    $user = User::find(session('user_id'));
+    return view('user.edit',compact('user'));
+}
+
+public function update(Request $request)
+{
+    $user = User::find(session('user_id'));
+
+    $user->name = $request->name;
+    $user->mobile = $request->mobile;
+    $user->save();
+
+    return back()->with('success','Profile Updated');
+}
+Edit Page
+
+resources/views/user/edit.blade.php
+
+<h2>Edit Profile</h2>
+
+<form method="POST" action="/update-profile">
+@csrf
+Name: <input type="text" name="name" value="{{ $user->name }}"><br><br>
+Mobile: <input type="text" name="mobile" value="{{ $user->mobile }}"><br><br>
+
+<button type="submit">Update</button>
+</form>
+
+---------
+STEP 6 — CHANGE PASSWORD
+--------
+Routes
+Route::get('/change-password',[ProfileController::class,'changeForm']);
+Route::post('/change-password',[ProfileController::class,'changePassword']);
+Controller Code
+use Illuminate\Support\Facades\Hash;
+
+public function changeForm()
+{
+    return view('user.change');
+}
+
+public function changePassword(Request $request)
+{
+    $user = User::find(session('user_id'));
+
+    if(!Hash::check($request->current_password,$user->password)){
+        return back()->with('error','Current password wrong');
+    }
+
+    if($request->new_password != $request->confirm_password){
+        return back()->with('error','Passwords not matching');
+    }
+
+    $user->password = Hash::make($request->new_password);
+    $user->save();
+
+    return back()->with('success','Password Changed');
+}
+Change Password Page
+
+resources/views/user/change.blade.php
+
+<h2>Change Password</h2>
+
+<form method="POST" action="/change-password">
+@csrf
+
+Current Password:
+<input type="password" name="current_password"><br><br>
+
+New Password:
+<input type="password" name="new_password"><br><br>
+
+Confirm Password:
+<input type="password" name="confirm_password"><br><br>
+
+<button type="submit">Change Password</button>
+
+</form>
+
+
+ADMIN SIDE 
