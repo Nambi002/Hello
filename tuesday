@@ -795,4 +795,342 @@ $request->session()->invalidate()
 ---------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------
+optional solution for unv/v/ina
 
+In this line:
+
+@foreach($users as $user)
+
+What is $users and $user?
+And if my database name is data, will it cause issues?
+
+Let me explain clearly.
+
+What is $users?
+
+$users is a variable coming from your Controller.
+
+Example from AdminController:
+
+public function inactive()
+{
+    $users = User::onlyTrashed()->get();
+    return view('admin.inactive', compact('users'));
+}
+
+Here:
+
+User::onlyTrashed()->get();
+→ fetches all inactive users
+→ stores them in a variable called $users
+
+Then:
+
+compact('users')
+
+sends that $users variable to the Blade file.
+
+So in Blade:
+
+@foreach($users as $user)
+
+means:
+
+Loop through all records stored in $users.
+
+What is $user?
+
+Inside the loop:
+
+@foreach($users as $user)
+
+$users = collection (many rows)
+
+$user = single row
+
+Example:
+
+If database has:
+
+id	name
+1	Ravi
+2	Arun
+
+Then:
+
+First loop → $user = Ravi
+Second loop → $user = Arun
+
+That is why we use singular inside loop.
+
+My database name is data. Is there any issue?
+
+No issue at all.
+
+Database name does NOT matter here.
+
+What matters:
+
+• Your .env file must connect to correct database
+• Your User model must point to correct table
+
+Example .env:
+
+DB_DATABASE=data
+
+That is enough.
+
+Important: Table name matters
+
+If your table name is NOT users (for example data),
+then in your User model you must define:
+
+Open:
+
+app/Models/User.php
+
+Add:
+
+protected $table = 'data';
+
+If your table name is users, no need to change.
+
+If you get error: "Undefined variable $users"
+
+That means controller did not send variable.
+
+Make sure your controller has:
+
+return view('admin.inactive', compact('users'));
+
+Summary
+
+$users → collection from database
+$user → single row inside loop
+Database name does not matter
+Table name must match model
+
+
+
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+
+
+
+
+
+
+FOLDER STRUCTURE
+
+Create:
+
+resources/views/admin/
+
+Inside admin folder create:
+
+dashboard.blade.php
+unverified.blade.php
+verified.blade.php
+inactive.blade.php
+
+COMMON ADMIN LAYOUT (Sidebar + Header)
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+To avoid repeating code, first create:
+
+resources/views/admin/layout.blade.php
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+
+<div style="display:flex; justify-content:space-between; background:#ddd; padding:10px;">
+    <div><b>LOGO</b></div>
+    <div>
+        <form method="POST" action="{{ url('/admin/logout') }}">
+            @csrf
+            <button type="submit">Logout</button>
+        </form>
+    </div>
+</div>
+
+<div style="display:flex;">
+
+    <div style="width:200px; background:#f1f1f1; padding:10px;">
+        <a href="{{ url('/admin/unverified') }}">Unverified Users</a><br><br>
+        <a href="{{ url('/admin/verified') }}">Verified Users</a><br><br>
+        <a href="{{ url('/admin/inactive') }}">Inactive Users</a>
+    </div>
+
+    <div style="flex:1; padding:20px;">
+        @yield('content')
+    </div>
+
+</div>
+
+</body>
+</html>
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+ UNVERIFIED USERS PAGE
+
+resources/views/admin/unverified.blade.php
+
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Unverified Users</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Mobile</th>
+        <th>Action</th>
+    </tr>
+
+    @foreach($users as $user)
+    <tr>
+        <td>{{ $user->id }}</td>
+        <td>{{ $user->name }}</td>
+        <td>{{ $user->email }}</td>
+        <td>{{ $user->mobile }}</td>
+        <td>
+            <a href="{{ url('/admin/verify/'.$user->id) }}">Verify</a>
+        </td>
+    </tr>
+    @endforeach
+</table>
+
+@endsection
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+VERIFIED USERS PAGE
+
+resources/views/admin/verified.blade.php
+
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Verified Users</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Mobile</th>
+        <th>Action</th>
+    </tr>
+
+    @foreach($users as $user)
+    <tr>
+        <td>{{ $user->id }}</td>
+        <td>{{ $user->name }}</td>
+        <td>{{ $user->email }}</td>
+        <td>{{ $user->mobile }}</td>
+        <td>
+            <a href="{{ url('/admin/inactive-user/'.$user->id) }}">Inactive</a>
+        </td>
+    </tr>
+    @endforeach
+</table>
+
+@endsection
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+ INACTIVE USERS PAGE
+
+resources/views/admin/inactive.blade.php
+
+@extends('admin.layout')
+
+@section('content')
+
+<h2>Inactive Users</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Mobile</th>
+    </tr>
+
+    @foreach($users as $user)
+    <tr>
+        <td>{{ $user->id }}</td>
+        <td>{{ $user->name }}</td>
+        <td>{{ $user->email }}</td>
+        <td>{{ $user->mobile }}</td>
+    </tr>
+    @endforeach
+</table>
+
+@endsection
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+CONTROLLER METHODS (IMPORTANT)
+
+Make sure AdminController has:
+
+public function unverified()
+{
+    $users = User::where('status','unverified')->get();
+    return view('admin.unverified',compact('users'));
+}
+
+public function verified()
+{
+    $users = User::where('status','verified')->get();
+    return view('admin.verified',compact('users'));
+}
+
+public function inactive()
+{
+    $users = User::onlyTrashed()->get();
+    return view('admin.inactive',compact('users'));
+}
+
+public function verifyUser($id)
+{
+    $user = User::find($id);
+    $user->status='verified';
+    $user->save();
+    return back();
+}
+
+public function inactiveUser($id)
+{
+    $user = User::find($id);
+    $user->delete(); // soft delete
+    return back();
+}
+HOW IT WORKS
+
+User registers
+→ status = unverified
+→ appears in Unverified page
+
+Admin clicks Verify
+→ status becomes verified
+→ moves to Verified page
+
+Admin clicks Inactive
+→ soft delete
+→ appears in Inactive page
+
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
