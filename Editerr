@@ -1,0 +1,28 @@
+use Illuminate\Support\Facades\Auth;
+
+public function edit()
+{
+    $user = Auth::user();
+    return view('user.edit', compact('user'));
+}
+
+update
+
+public function update(Request $request)
+{
+    $request->validate([
+        'name' => 'required',
+        'mobile' => 'required'
+    ]);
+
+    $user = Auth::user();
+    $user->name = $request->name;
+    $user->mobile = $request->mobile;
+    $user->save();
+
+    return back()->with('success','Profile Updated');
+}
+
+edit 
+
+?? '' 
