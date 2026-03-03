@@ -1,0 +1,95 @@
+
+ErrorException
+resources\views\edit.blade.php:15
+Attempt to read property "name" on null
+
+LARAVEL
+12.52.0
+PHP
+8.2.12
+UNHANDLED
+CODE 0
+500
+GET
+http://127.0.0.1:8000/edit-profile
+
+Exception trace
+Illuminate\Foundation\Bootstrap\HandleExceptions->Illuminate\Foundation\Bootstrap\{closure}(integer, string, string, integer)
+resources\views\edit.blade.php:15
+
+10
+11<form method="POST" action="{{ url('/update-profile') }}">
+12    @csrf
+13
+14    Name:<br>
+15    <input type="text" name="name"  value="<?php echo "{{ $user->name }}"; ?>">
+16    <br><br>
+17
+18    Email:<br>
+19    <input type="email"  value="<?php echo "{{ $user->email }}"; ?>">
+20    <br><br>
+21
+22    Mobile:<br>
+23    <input type="text" name="mobile"  value="<?php echo "{{ $user->mobile }}"; ?>">
+24    <br><br>
+25
+26    <button type="submit">Update</button>
+
+=====================================================================================================================
+
+InvalidArgumentException
+vendor\laravel\framework\src\Illuminate\View\FileViewFinder.php:138
+View [user.edit] not found.
+
+LARAVEL
+12.52.0
+PHP
+8.2.12
+UNHANDLED
+CODE 0
+500
+GET
+http://127.0.0.1:8000/edit-profile
+
+Exception trace
+4 vendor frames
+
+view(string, array)
+app\Http\Controllers\user\ProfileController.php:41
+
+36    }
+37*/
+38    public function edit()
+39{
+40    $user = User::find(session('user_id'));
+41    return view('user.edit', compact('user'));
+42}
+
+=======================================================================================================================
+
+Error
+app\Http\Controllers\user\ProfileController.php:52
+Attempt to assign property "name" on null
+
+LARAVEL
+12.52.0
+PHP
+8.2.12
+UNHANDLED
+CODE 0
+500
+POST
+http://127.0.0.1:8000/update-profile
+
+Exception trace
+App\Http\Controllers\user\ProfileController->update(object(Illuminate\Http\Request))
+app\Http\Controllers\user\ProfileController.php:52
+
+47        'name' => 'required',
+48        'mobile' => 'required'
+49    ]);
+50
+51    $user = User::find(session('user_id'));
+52    $user->name = $request->name;
+53    $user->mobile = $request->mobile;
+54    $user->save();
