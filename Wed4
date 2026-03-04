@@ -1,0 +1,1307 @@
+
+This is my full Laravel code for login / admin login task.
+
+here to add edit page and change password page.
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+1.Models->user.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class User extends Authenticatable
+{
+    use SoftDeletes;
+
+    protected $fillable = [
+        'name',
+        'email',
+        'mobile',
+        'password',
+        'status'
+    ];
+}
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+2.bootstrap -> app.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use  App\Http\Middleware\UserMiddleware;
+use  App\Http\Middleware\AdminMiddleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+        
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        //27/02//
+         $middleware->alias([
+          'user.auth' => UserMiddleware::class,
+          'admin.auth' => AdminMiddleware::class,
+            // ... other aliases
+        ]);
+        //27/02//
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        //
+    })->create();
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+3.migration -> create_user_table
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+public function up(): void
+{
+    Schema::create('users', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('email')->unique();
+        $table->string('mobile');
+        $table->string('password');
+        $table->string('status')->default('unverified');
+        $table->timestamps();
+        $table->softDeletes();
+    });
+}
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('sessions');
+    }
+};
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+4.resources -> view -> admin ->
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+--> dashboard.blade.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+    <style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family:'Poppins', sans-serif;
+    }
+    .title{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        background:#4c4ea3;
+        padding:30px;
+        color:#fff;
+        height:10vh;
+    }
+    .title a{
+        color:#fff;
+        text-decoration:none;
+    }
+    .content{
+        display:flex;
+    }
+    .main{
+        width:200px;
+        background:#4c4ea3;
+        padding:30px;
+        height:90vh;
+    }
+    head{
+        margin-left:10px;
+    }
+    .main a{
+        color:#fff;
+        margin-top:50px;
+    }
+    .main-content{
+        flex:1;
+        padding:20px;
+        font-size:28px;
+        font-weight:600;
+    }
+    .left{
+        margin-top:50px;
+    }
+    .left ul{
+        list-style:none;
+    }
+    .left ul li{
+        margin:25px 0;
+        margin-bottom:80px;
+    }
+    .left ul li a{
+        color:#fff;
+        text-decoration:none;
+        font-size:17px;
+        margin-left:10px;
+    }
+</style>
+</head>
+<body>
+
+<div class="title">
+    <div class="head"><b>ADMIN PANEL</b></div>
+    <div><a href="/admin/logout">Logout</a></div>
+</div>
+
+<div class="content">
+
+    <div class="main">
+        <div class="left">
+        <ul>
+            
+        <li><a href="/admin/unverified-users">Unverified Users</a></li>
+        <li><a href="/admin/verified-users">Verified Users</a></li>
+        <li><a href="/admin/inactive-users">Inactive Users</a></li>
+        </ul>
+    </div>
+    </div>
+
+    <div  class="main-content">
+       @yield('content')
+
+    </div>
+
+</div>
+
+</body>
+</html>
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+--> inactive.blade.php
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>user</title>
+</head>
+<style>
+    h2{
+        font-size:34px;
+        font-weight:600;
+        margin-top:60px;
+        margin-bottom:60px;
+    }
+    table, td, th {
+        border: 1px solid black;
+        padding:10px;
+      
+    }
+    table {
+         border-collapse: collapse;
+         width: 100%;
+         text-align:center;
+          font-size:18px;
+        font-weight:normal;
+    }
+</style>
+<body>
+@extends('admin.dashboard')
+@section('content')
+<form action="/admin/inactive-users" method="POST">
+<h2>Inactive Users</h2>
+
+<table>
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+</tr>
+@endforeach
+
+</table>
+@endsection
+</form>
+</body>
+</html>
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+--> login.blade.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
+<style>
+    body{
+        font-family:sans-serif;
+    }
+    .main{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+    }
+    form{
+        background:#fff;
+        padding:50px 5%;
+        box-shadow:0 5px 15px rgba(0,0,0,0.1);
+        margin:auto;
+    }
+    h2{
+        font-size:42px;
+        font-weight:600;
+        text-align:center;
+        margin-bottom:80px;
+    }
+    label{
+        font-size:18px;
+        font-weight:600;
+    }
+    input{
+        width:100%;
+        padding:6px;
+        font-size:15px;
+        margin-top:10px;
+        margin-bottom:10px;
+        
+    }
+    .button{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+
+    }
+    button{
+        padding:80px;
+        font-size:18px;
+        margin-top:50px;
+        margin-bottom:50px;
+    }
+    p{
+        font-size:18px;
+        font-weight:600;
+        margin-top:20px;
+        margin-bottom:30px;
+        text-align:center;
+        color:red;
+    }
+
+.password-box {
+    position: relative;
+    width: 380px;
+}
+
+.password-box input {
+    width: 100%;
+    padding: 8px;
+    padding-right: 3px;
+    padding-left: 10px;
+}
+
+.password-box i {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: gray;
+}
+
+</style>
+<script>
+   
+    function toggleLoginPassword() {
+    var pass = document.getElementById("loginPassword");
+    var icon = event.target;
+
+    if (pass.type === "password") {
+        pass.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        pass.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+
+</script>
+</head>
+<body>
+<div class="main">
+
+<form method="POST" action="/admin/login">
+    <h2>Admin Login</h2>
+    @csrf
+     
+    <!-- Error Message -->
+    @if(session('error'))
+    <p style="color:red;">{{ session('error') }}</p>
+    @endif
+
+   <!-- <label>Username:</label><br>
+    <input type="text" name="username" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required><br><br> -->
+
+    <label>Email Address:</label><br>
+    <input type="email" name="email" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required><br><br>
+    
+
+   <!-- <label>Password:</label><br>
+    <input type="password" name="password" required><br><br>-->
+
+    <label>Password:</label><br>
+    <div class="password-box">
+    <input type="password" id="loginPassword" name="password" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required>
+    <i class="fa-solid fa-eye" onclick="toggleLoginPassword()"></i>
+    </div>
+
+
+    <div class="button">
+    <button type="submit" class="btn btn-primary">Login</button>
+    </div>
+
+
+
+</form>
+</div>
+</body>
+</html>
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+----> unverified.blade.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>user</title>
+</head>
+<style>
+    h2{
+        font-size:34px;
+        font-weight:600;
+        margin-top:60px;
+        margin-bottom:60px;
+    }
+  table, td, th {
+  border: 1px solid black;
+    padding:10px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align:center;
+   font-size:18px;
+        font-weight:normal;
+}
+td a{
+    text-decoration:none;
+    color:white;
+}
+.button{
+    display:inline;
+    background:#24a0ed;
+    border-radius:6px;
+    padding:7px;
+}
+</style>
+<body>
+    @extends('admin.dashboard')
+
+@section('content')
+<form action="/admin/unverified-users" method="POST">
+    @csrf
+<h2>Unverified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Phone</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <div class="button">
+        <a href="/admin/verify/{{ $user->id }}">Verify</a>
+        </div>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+</form>
+    
+</body>
+</html>
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+-->verified.blade.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>user</title>
+</head>
+<style>
+    h2{
+        font-size:34px;
+        font-weight:600;
+        margin-top:60px;
+        margin-bottom:60px;
+    }
+    table, td, th {
+        border: 1px solid black;
+        padding:10px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        text-align:center;
+        font-size:18px;
+        font-weight:normal;
+    }
+    td a{
+        text-decoration:none;
+        color:white;
+    }
+    .button{
+        display:inline;
+        background:grey;
+        border-radius:6px;
+         padding:7px;
+    }
+</style>
+<body>
+    @extends('admin.dashboard')
+
+@section('content')
+<form action="/admin/verified-users" method="POST">
+    @csrf
+<h2>Verified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <div class="button">
+        <a href="/admin/inactive/{{ $user->id }}">Inactive</a>
+        </div>
+    </td>
+</tr>
+@endforeach
+</table>
+
+@endsection
+</form>
+</body>
+</html>
+
+resource->views 
+
+--> edit.blade.php
+
+@extends('home')
+
+@section('content')
+
+<h2>Edit Profile</h2>
+
+@if(session('success'))
+    <p style="color:green">{{ session('success') }}</p>
+@endif
+
+<form method="POST" action="{{ url('/update-profile') }}">
+    @csrf
+
+    <div>
+        <label>Name:</label>
+        <input type="text" name="name">
+        @error('name')
+            <span style="color:red">{{ $message }}</span>
+        @enderror
+    </div>
+
+
+    <div>
+        <label>Mobile:</label>
+        <input type="text" name="mobile" >
+        @error('mobile')
+            <span style="color:red">{{ $message }}</span>
+        @enderror
+    </div>
+
+    <button type="submit">Update</button>
+</form>
+
+@endsection
+
+
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+-->home.blade.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home Page</title>
+</head>
+<style>
+    *{
+        margin:0;
+        padding:0;
+    }
+    body{
+        font-family:sans-serif;
+    }
+    .main{
+        display:flex;
+        justify-content:space-between;
+        background:#4c4ea3;
+        padding:30px;
+        color:#fff;
+    }
+    .right a{
+        color:#fff;
+        text-decoration:none;
+    }
+</style>
+<body>
+<div class="Content">
+  
+    <div class="main">
+    <div><b>LOGO</b></div>
+    <div class="right">
+    <a href="/edit-profile">Edit Profile</a> |
+<a href="/change-password">Change Password</a> |
+<a href="/logout">Logout</a> </div>
+</div>
+<form method="POST" action="/logout" style="display:inline;">
+            @csrf
+           
+        </form>
+
+
+        <div style="padding:20px;">
+    @yield('content')
+</div>
+
+
+
+</div>
+
+</body>
+</html>
+
+
+-->login.blade.php
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
+<style>
+    body{
+        font-family:sans-serif;
+    }
+    .main{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+    }
+    form{
+        background:#fff;
+        padding:50px 5%;
+        box-shadow:0 5px 15px rgba(0,0,0,0.1);
+        margin:auto;
+    }
+    h2{
+        font-size:42px;
+        font-weight:600;
+        text-align:center;
+        margin-bottom:80px;
+    }
+    label{
+        font-size:18px;
+        font-weight:600;
+    }
+    input{
+        width:100%;
+        padding:6px;
+        font-size:15px;
+        margin-top:10px;
+        margin-bottom:10px;     
+    }
+    .button{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+    }
+    button{
+        padding:80px;
+        font-size:18px;
+        margin-top:50px;
+        margin-bottom:50px;
+    }
+    p{
+        font-size:18px;
+        font-weight:600;
+        margin-top:20px;
+        margin-bottom:30px;
+        text-align:center;
+        color:red;
+    }
+    .password-box {
+        position: relative;
+        width: 380px;
+    }
+    .password-box input {
+        width: 100%;
+        padding: 8px;
+        padding-right: 3px;
+        padding-left: 10px;
+    }
+    .password-box i {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: gray;
+    }
+
+</style>
+<script>
+   
+    function toggleLoginPassword() {
+    var pass = document.getElementById("loginPassword");
+    var icon = event.target;
+
+    if (pass.type === "password") {
+        pass.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        pass.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+
+</script>
+</head>
+<body>
+<div class="main">
+
+<form method="POST" action="/login">
+    <h2>Login Form</h2>
+    @csrf
+     
+    <!-- Error Message -->
+    @if(session('error'))
+    <p>{{ session('error') }}</p>
+    @endif
+
+
+   <!-- <label>Username:</label><br>
+    <input type="text" name="username" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required><br><br> -->
+
+   <!-- <label>Password:</label><br>
+    <input type="password" name="password" required><br><br>-->
+
+    <label>Email Address:</label><br>
+    <input type="email" name="email" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required><br><br>
+
+    <label>Password:</label><br>
+<div class="password-box">
+    <input type="password" id="loginPassword" name="password" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required>
+    <i class="fa-solid fa-eye" onclick="toggleLoginPassword()"></i>
+</div>
+
+
+    <div class="button">
+    <button type="submit" class="btn btn-primary">Login</button>
+    </div>
+
+    <p>Don't have an account? 
+    <a href="/register">Register Here</a>
+</p>
+
+</form>
+</div>
+</body>
+</html>
+
+
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+-->register.blade.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register Page</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<script>
+    /*
+function myFunction() {
+  var x = document.getElementById("myInput");
+  if (x.type === "password") {
+    x.type = "text";
+  } else {
+    x.type = "password";
+  }
+}
+
+function myFunction1() {
+  var y = document.getElementById("myInput1");
+  if (y.type === "password") {
+    y.type = "text";
+  } else {
+    y.type = "password";
+  }
+}
+*/
+    function toggleRegisterPassword() {
+    var pass = document.getElementById("registerPassword");
+    var icon = event.target;
+
+    if (pass.type === "password") {
+        pass.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        pass.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+
+    function toggleRegisterPassword1() {
+    var pass = document.getElementById("registerPassword1");
+    var icon = event.target;
+
+    if (pass.type === "password") {
+        pass.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        pass.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+</script>
+<style>
+  body{
+        font-family:sans-serif;       
+    }
+    .main{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+    }
+    form{
+        background:#fff;
+        padding:2% 7%;
+        box-shadow:0 5px 15px rgba(0,0,0,0.1);
+        margin:15px;
+    }
+    h2{
+        font-size:42px;
+        font-weight:600;
+        text-align:center;
+        margin-bottom:80px;
+    }
+    label{
+        font-size:18px;
+    }
+    input{
+        width:100%;
+        padding:6px;
+        font-size:15px;
+        margin-top:10px;
+        margin-bottom:10px;
+    }
+    .button{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+    }
+    button{
+        padding:6px;
+        font-size:18px;
+        margin-top:30px;
+        margin-bottom:30px;
+    }
+    p{
+        font-size:18px;
+        font-weight:600;
+        margin-top:20px;
+        margin-bottom:20px;
+        text-align:center;
+        color:red;
+    }    
+    .password-box {
+        position: relative;
+    }
+    .password-box input {
+        width: 100%;
+        padding: 6px;
+        padding-right: 3px;
+        padding-left: 12px;
+        font-size:15px;
+        margin-top:10px;
+        margin-bottom:10px;
+    }
+    .password-box i {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: gray;
+    }
+    label{
+        font-size:18px;
+        font-weight:600;
+    }
+
+</style>
+
+</head>
+<body>
+    <div class="main">
+
+    <form method="POST" action="/register">
+    @csrf
+
+    <h2>Register Form</h2>
+
+    @if(session('error'))
+    <p>{{ session('error') }}</p>
+    @endif
+
+    <label>Username:</label><br>
+    <input type="text" name="username" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required><br>
+
+    <label>Email:</label><br>
+    <input type="email" name="email" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required><br>
+
+    <label>Phone Number:</label><br>
+    <input type="text" name="phone" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required><br>
+
+   <!-- <label>Password:</label><br>
+    <input type="password" value="" id="myInput"><br>
+    <input type="checkbox" onclick="myFunction()">Show Password<br><br>
+
+    <label>Confirm Password:</label><br>
+    <input type="password" name="confirm_password" value="" id="myInput1" required><br>
+     <input type="checkbox" onclick="myFunction1()">Show Password<br><br>
+
+  Password
+  <input type="password" name="password" autocomplete="current-password" required="" id="id_password">
+  <i class="far fa-eye" id="togglePassword" style="margin-left: -30px; cursor: pointer;"></i>
+<br>
+-->
+
+    <label>Password:</label><br>
+<div class="password-box">
+    <input type="password" id="registerPassword" name="password" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required>
+    <i class="fa-solid fa-eye" onclick="toggleRegisterPassword()"></i>
+</div>
+<br>
+
+    <label>Confirm Password:</label><br>
+<div class="password-box">
+    <input type="password" id="registerPassword1" name="password1" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" required>
+    <i class="fa-solid fa-eye" onclick="toggleRegisterPassword1()"></i>
+</div>
+<br>
+    <div class="button">
+    <button type="submit"  class="btn btn-primary">Register</button>
+    </div>
+    <p>Already have an account? 
+    <a href="/login">Login Here</a>
+</p>
+</form>
+
+
+</div>
+</body>
+</html>
+
+
+
+-------
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+routes--> web.php
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\LoginController;
+
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\UserManagementController;
+
+
+use App\Http\Controllers\user\ProfileController;
+
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+//user//
+Route::get('/login', [LoginController::class, 'index']);
+
+Route::post('/login', [LoginController::class, 'checkLogin']);
+
+Route::get('/register', [LoginController::class, 'showRegister']);
+Route::post('/register', [LoginController::class, 'register']);
+
+Route::get('/home', [LoginController::class, 'home']);
+
+
+
+Route::prefix('admin')->group(function () {
+
+    Route::get('/login', [AdminAuthController::class, 'showLogin']);
+    Route::post('/login', [AdminAuthController::class, 'login']);
+    Route::get('/logout', [AdminAuthController::class, 'logout']);
+
+    Route::get('/dashboard', [AdminAuthController::class, 'dashboard']);
+
+
+    Route::middleware(['user.auth'])->group(function(){
+    
+    Route::get('/edit-profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/update-profile', [ProfileController::class, 'update'])->name('profile.update');
+
+   
+
+    Route::get('/home', function(){
+       return view('user.home');
+    });
+
+});
+
+
+
+
+    Route::middleware(['admin.auth'])->group(function () {
+
+        Route::get('/unverified-users', [AdminAuthController::class, 'unverified']);
+        Route::get('/verified-users', [AdminAuthController::class, 'verified']);
+        Route::get('/inactive-users', [AdminAuthController::class, 'inactive']);
+
+        Route::get('/verify/{id}', [AdminAuthController::class, 'verifyUser']);
+        Route::get('/inactive/{id}', [AdminAuthController::class, 'inactiveUser']);
+    });
+
+});
+
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+----------------------------------------------------------------------
+
+Good 👌 Your structure is almost correct.
+Now I will give you complete working code for:
+
+1️⃣ Edit Profile (Properly working)
+2️⃣ Change Password Page (Secure – using Hash)
+3️⃣ Correct Routes (Important fix in your code)
+
+⚠️ FIRST — IMPORTANT ROUTE MISTAKE
+Your user routes are inside admin prefix:
+
+Route::prefix('admin')->group(function () {
+So your edit profile URL becomes:
+
+/admin/edit-profile ❌
+But in home.blade.php you are using:
+
+/edit-profile ❌
+That is wrong.
+
+✅ STEP 1 — FIX ROUTES (web.php)
+Move user routes outside admin prefix.
+
+✅ Correct web.php
+// USER ROUTES
+Route::middleware(['user.auth'])->group(function(){
+
+    Route::get('/home', function(){
+        return view('home');
+    });
+
+    Route::get('/edit-profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/update-profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/change-password', [ProfileController::class, 'showChangePassword'])->name('password.form');
+    Route::post('/change-password', [ProfileController::class, 'changePassword'])->name('password.update');
+
+    Route::post('/logout', [LoginController::class, 'logout']);
+});
+✅ STEP 2 — FIX EDIT PAGE (VERY IMPORTANT)
+Your edit page does not show old values.
+
+Update:
+
+📄 resources/views/edit.blade.php
+@extends('home')
+
+@section('content')
+
+<h2>Edit Profile</h2>
+
+@if(session('success'))
+    <p style="color:green">{{ session('success') }}</p>
+@endif
+
+<form method="POST" action="{{ route('profile.update') }}">
+    @csrf
+
+    <div>
+        <label>Name:</label>
+        <input type="text" name="name" value="{{ auth()->user()->name }}">
+        @error('name')
+            <span style="color:red">{{ $message }}</span>
+        @enderror
+    </div>
+
+    <div>
+        <label>Mobile:</label>
+        <input type="text" name="mobile" value="{{ auth()->user()->mobile }}">
+        @error('mobile')
+            <span style="color:red">{{ $message }}</span>
+        @enderror
+    </div>
+
+    <button type="submit">Update</button>
+</form>
+
+@endsection
+✅ STEP 3 — CREATE CHANGE PASSWORD PAGE
+📄 resources/views/change-password.blade.php
+@extends('home')
+
+@section('content')
+
+<h2>Change Password</h2>
+
+@if(session('success'))
+    <p style="color:green">{{ session('success') }}</p>
+@endif
+
+@if(session('error'))
+    <p style="color:red">{{ session('error') }}</p>
+@endif
+
+<form method="POST" action="{{ route('password.update') }}">
+    @csrf
+
+    <div>
+        <label>Current Password:</label>
+        <input type="password" name="current_password" required>
+    </div>
+
+    <div>
+        <label>New Password:</label>
+        <input type="password" name="new_password" required>
+    </div>
+
+    <div>
+        <label>Confirm Password:</label>
+        <input type="password" name="new_password_confirmation" required>
+    </div>
+
+    <button type="submit">Change Password</button>
+</form>
+
+@endsection
+✅ STEP 4 — UPDATE ProfileController
+📄 app/Http/Controllers/User/ProfileController.php
+
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+
+class ProfileController extends Controller
+{
+    // Show Edit Page
+    public function edit()
+    {
+        return view('edit');
+    }
+
+    // Update Profile
+    public function update(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'mobile' => 'required|digits:10',
+        ]);
+
+        $user = auth()->user();
+
+        $user->update([
+            'name' => $request->name,
+            'mobile' => $request->mobile,
+        ]);
+
+        return back()->with('success', 'Profile Updated Successfully');
+    }
+
+    // Show Change Password Page
+    public function showChangePassword()
+    {
+        return view('change-password');
+    }
+
+    // Change Password
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|confirmed',
+        ]);
+
+        $user = auth()->user();
+
+        // Check current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->with('error', 'Current password is incorrect');
+        }
+
+        // Update new password
+        $user->update([
+            'password' => Hash::make($request->new_password)
+        ]);
+
+        return back()->with('success', 'Password changed successfully');
+    }
+}
+✅ STEP 5 — ADD Logout in LoginController
+public function logout()
+{
+    auth()->logout();
+    return redirect('/login');
+}
