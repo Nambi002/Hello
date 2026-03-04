@@ -1,0 +1,165 @@
+edit pc 
+use Illuminate\Support\Facades\Auth;
+
+public function edit()
+{
+    $user = Auth::user();
+    return view('user.edit', compact('user'));
+}
+
+public function update(Request $request)
+{
+    $request->validate([
+        'name' => 'required',
+        'mobile' => 'required'
+    ]);
+
+    Auth::user()->update([
+        'name' => $request->name,
+        'mobile' => $request->mobile
+    ]);
+
+    return back()->with('success','Profile Updated');
+}
+
+logincontroller check on;ly
+
+use Illuminate\Support\Facades\Auth;
+
+public function login(Request $request)
+{
+    $credentials = $request->only('email', 'password');
+
+    if (Auth::attempt($credentials)) {
+
+        $request->session()->regenerate(); // security
+
+        return redirect('/dashboard');
+    }
+
+    return back()->with('error', 'Invalid credentials');
+}
+
+
+
+
+sample edit 
+
+use Illuminate\Support\Facades\Auth;
+
+public function edit()
+{
+    $user = Auth::user();   // always logged-in user
+    return view('user.edit', compact('user'));
+}
+
+---
+
+public function update(Request $request)
+{
+    $request->validate([
+        'name' => 'required',
+        'mobile' => 'required'
+    ]);
+
+    $user = Auth::user();   // get logged user
+
+    $user->name = $request->name;
+    $user->mobile = $request->mobile;
+    $user->save();
+
+    return back()->with('success', 'Profile Updated');
+}
+
+password valoidation 
+
+
+route.php
+
+
+use App\Http\Controllers\AuthController;
+
+Route::middleware('auth')->group(function () {
+    Route::get('/change-password', [AuthController::class, 'showChangePassword']);
+    Route::post('/change-password', [AuthController::class, 'updatePassword']);
+});
+
+controller 
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Http\Request;
+
+
+public function showChangePassword()
+{
+    return view('change-password');
+}
+
+public function updatePassword(Request $request)
+{
+    $request->validate([
+        'current_password' => 'required',
+        'new_password' => [
+            'required',
+            'confirmed',
+            Password::min(8)
+                ->mixedCase()
+                ->numbers()
+                ->symbols()
+        ],
+    ]);
+
+    // Check current password
+    if (!Hash::check($request->current_password, Auth::user()->password)) {
+        return back()->withErrors([
+            'current_password' => 'Current password is incorrect'
+        ]);
+    }
+
+    // Update password
+    Auth::user()->update([
+        'password' => Hash::make($request->new_password)
+    ]);
+
+    return back()->with('success', 'Password changed successfully');
+}
+
+
+blade.php
+
+<h2>Change Password</h2>
+
+@if(session('success'))
+    <div style="color:green;">
+        {{ session('success') }}
+    </div>
+@endif
+
+<form method="POST" action="/change-password">
+    @csrf
+
+    <div>
+        <label>Current Password</label>
+        <input type="password" name="current_password">
+        @error('current_password')
+            <div style="color:red">{{ $message }}</div>
+        @enderror
+    </div>
+
+    <div>
+        <label>New Password</label>
+        <input type="password" name="new_password">
+        @error('new_password')
+            <div style="color:red">{{ $message }}</div>
+        @enderror
+    </div>
+
+    <div>
+        <label>Confirm New Password</label>
+        <input type="password" name="new_password_confirmation">
+    </div>
+
+    <button type="submit">Update Password</button>
+</form>
