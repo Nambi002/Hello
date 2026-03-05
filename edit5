@@ -1,0 +1,564 @@
+ Your Edit Profile link
+<a href="/edit-profile">Edit Profile</a>
+ Your route
+Route::prefix('admin')->group(function () {
+
+    Route::middleware(['user.auth'])->group(function(){
+        Route::get('/edit-profile', [ProfileController::class, 'edit']);
+        Route::post('/update-profile', [ProfileController::class, 'update']);
+    });
+
+});
+
+This route URL is actually:
+
+/admin/edit-profile
+
+ But you are visiting:
+
+/edit-profile
+
+ Result: 404 error
+
+ FIX #1 – Correct the URL (MANDATORY)
+Update home.blade.php
+<a href="/admin/edit-profile">Edit Profile</a> |
+<a href="/admin/change-password">Change Password</a> |
+<a href="/logout">Logout</a>
+ SECOND PROBLEM (null user)
+
+You previously had:
+
+value="{{ $user->name }}"
+
+But you never passed $user from controller.
+
+FIX #2 – ProfileController (FULL WORKING CODE)
+app/Http/Controllers/user/ProfileController.php
+<?php
+
+namespace App\Http\Controllers\user;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class ProfileController extends Controller
+{
+    public function edit()
+    {
+        $user = Auth::user();   // logged-in user
+        return view('edit', compact('user'));
+    }
+
+    public function update(Request $request)
+    {
+        $request->validate([
+            'name'   => 'required|string|max:255',
+            'mobile' => 'required|digits:10',
+        ]);
+
+        $user = Auth::user();
+
+        $user->update([
+            'name'   => $request->name,
+            'mobile' => $request->mobile,
+        ]);
+
+        return redirect()->back()->with('success', 'Profile updated successfully');
+    }
+}
+FIX #3 – edit.blade.php (FINAL)
+@extends('home')
+
+@section('content')
+
+<h2>Edit Profile</h2>
+
+@if(session('success'))
+    <p style="color:green">{{ session('success') }}</p>
+@endif
+
+<form method="POST" action="{{ url('/admin/update-profile') }}">
+    @csrf
+
+    <div>
+        <label>Name:</label>
+        <input type="text" name="name" value="{{ old('name', $user->name) }}">
+        @error('name')
+            <span style="color:red">{{ $message }}</span>
+        @enderror
+    </div>
+
+    <div>
+        <label>Mobile:</label>
+        <input type="text" name="mobile" value="{{ old('mobile', $user->mobile) }}">
+        @error('mobile')
+            <span style="color:red">{{ $message }}</span>
+        @enderror
+    </div>
+
+    <button type="submit">Update</button>
+</form>
+
+@endsection
+FIX #4 – routes/web.php (Clean & Correct)
+Route::prefix('admin')->group(function () {
+
+    Route::get('/login', [AdminAuthController::class, 'showLogin']);
+    Route::post('/login', [AdminAuthController::class, 'login']);
+    Route::get('/logout', [AdminAuthController::class, 'logout']);
+    Route::get('/dashboard', [AdminAuthController::class, 'dashboard']);
+
+    // USER AUTH
+    Route::middleware(['user.auth'])->group(function () {
+        Route::get('/edit-profile', [ProfileController::class, 'edit']);
+        Route::post('/update-profile', [ProfileController::class, 'update']);
+    });
+
+    // ADMIN AUTH
+    Route::middleware(['admin.auth'])->group(function () {
+        Route::get('/unverified-users', [AdminAuthController::class, 'unverified']);
+        Route::get('/verified-users', [AdminAuthController::class, 'verified']);
+        Route::get('/inactive-users', [AdminAuthController::class, 'inactive']);
+
+        Route::get('/verify/{id}', [AdminAuthController::class, 'verifyUser']);
+        Route::get('/inactive/{id}', [AdminAuthController::class, 'inactiveUser']);
+    });
+});
+
+
+/admin/* → admin only
+
+/user/* → users only
+
+If you want, I can:
+
+Refactor routes properly
+
+Add Change Password page
+
+Fix middleware logic cleanly
+
+Convert links to route() helper
+
+
+Your Auth::user() is returning NULL
+
+So this line:
+
+$user = Auth::user();
+
+is returning null.
+
+That’s why:
+
+$user->name is empty
+
+Update does nothing
+
+
+
+You are using custom login system, not Laravel default auth.
+
+In your LoginController, you probably did something like:
+
+session(['user_id' => $user->id]);
+
+But you DID NOT log in using:
+
+Auth::login($user);
+
+So Laravel doesn’t know who is logged in.
+
+METHOD 1 (BEST & PROFESSIONAL WAY)
+
+Use Laravel Auth properly.
+
+ Step 1 — Fix LoginController
+
+Inside your login success:
+
+use Illuminate\Support\Facades\Auth;
+
+public function checkLogin(Request $request)
+{
+    $user = User::where('email', $request->email)->first();
+
+    if ($user && Hash::check($request->password, $user->password)) {
+
+        Auth::login($user);   //  VERY IMPORTANT
+
+        return redirect('/home');
+    }
+
+    return back()->with('error', 'Invalid credentials');
+}
+Step 2 — Fix Home Route
+
+Currently you have:
+
+Route::get('/home', [LoginController::class, 'home']);
+
+Make sure home view loads like this:
+
+public function home()
+{
+    return view('home');
+}
+ Step 3 — Protect User Routes
+
+Move edit-profile OUTSIDE admin prefix.
+
+ WRONG
+Route::prefix('admin')->group(function () {
+ CORRECT
+Route::middleware(['user.auth'])->group(function(){
+
+    Route::get('/edit-profile', [ProfileController::class, 'edit']);
+    Route::post('/update-profile', [ProfileController::class, 'update']);
+
+});
+
+Now URL will be:
+
+/edit-profile
+ Step 4 — ProfileController (FINAL)
+use Illuminate\Support\Facades\Auth;
+
+public function edit()
+{
+    $user = Auth::user();
+
+    return view('edit', compact('user'));
+}
+
+public function update(Request $request)
+{
+    $request->validate([
+        'name' => 'required',
+        'mobile' => 'required'
+    ]);
+
+    $user = Auth::user();
+
+    $user->name = $request->name;
+    $user->mobile = $request->mobile;
+    $user->save();
+
+    return back()->with('success', 'Profile updated successfully');
+}
+WHY THIS FIX WORKS
+
+When you use:
+
+Auth::login($user);
+
+Laravel automatically:
+
+Stores user in session
+
+Makes Auth::user() available
+
+Makes middleware work properly
+
+Prevents null issue
+
+IMPORTANT CHECK
+
+Inside edit() temporarily add:
+
+dd(Auth::user());
+
+If it shows:
+
+null
+
+Then login is wrong.
+
+If it shows:
+
+App\Models\User { ... }
+
+Then everything is correct.
+
+
+
+Your problem =
+You logged in manually but did not use Laravel Auth system.
+
+Add:
+
+Auth::login($user);
+
+and everything will work perfectly.
+
+not working
+
+===
+
+ STEP 1 — FIX LOGIN PROPERLY (VERY IMPORTANT)
+
+Open LoginController.php
+
+Make sure you have:
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+
+Now replace your login function with this:
+
+public function checkLogin(Request $request)
+{
+    $credentials = $request->only('email', 'password');
+
+    if (Auth::attempt($credentials)) {
+
+        return redirect('/home');
+    }
+
+    return back()->with('error', 'Invalid credentials');
+}
+
+ REMOVE any manual session code like:
+
+session(['user_id' => $user->id]); = REMOVE
+STEP 2 — FIX REGISTER (IMPORTANT)
+
+In your register function, make sure password is hashed:
+
+public function register(Request $request)
+{
+    User::create([
+        'name' => $request->username,
+        'email' => $request->email,
+        'mobile' => $request->phone,
+        'password' => Hash::make($request->password), //  MUST
+        'status' => 'unverified'
+    ]);
+
+    return redirect('/login');
+}
+
+If password is not hashed → login will fail silently.
+
+STEP 3 — REMOVE EDIT ROUTE FROM ADMIN PREFIX
+
+Your current mistake:
+
+You put edit-profile inside:
+
+Route::prefix('admin')
+
+That is wrong for normal user.
+
+ Correct Routes (VERY IMPORTANT)
+
+In web.php, OUTSIDE admin prefix:
+
+Route::middleware(['auth'])->group(function(){
+
+    Route::get('/edit-profile', [ProfileController::class, 'edit']);
+    Route::post('/update-profile', [ProfileController::class, 'update']);
+
+});
+
+Now URL should be:
+
+http://127.0.0.1:8000/edit-profile
+
+NOT:
+
+/admin/edit-profile +
+STEP 4 — FIX PROFILE CONTROLLER
+use Illuminate\Support\Facades\Auth;
+
+public function edit()
+{
+    $user = Auth::user();
+    return view('edit', compact('user'));
+}
+
+public function update(Request $request)
+{
+    $request->validate([
+        'name' => 'required',
+        'mobile' => 'required'
+    ]);
+
+    $user = Auth::user();
+
+    $user->update([
+        'name' => $request->name,
+        'mobile' => $request->mobile,
+    ]);
+
+    return back()->with('success', 'Profile updated successfully');
+}
+STEP 5 — FIX EDIT VIEW
+<input type="text" name="name" value="{{ old('name', $user->name) }}">
+<input type="text" name="mobile" value="{{ old('mobile', $user->mobile) }}">
+
+Form action:
+
+<form method="POST" action="/update-profile">
+IMPORTANT DEBUG STEP
+
+Inside edit() add:
+
+dd(Auth::check());
+
+If it prints:
+
+
+Then login is correct.
+
+
+
+You are:
+
+Using custom middleware user.auth
+
+Not using Laravel default auth
+
+Not calling Auth::attempt()
+
+That is why Auth::user() returns null.
+
+
+
+
+Then I will fix it 100% for your project structure.
+
+Don’t worry. We will solve it.
+
+dd(Auth::check());
+
+If it prints:
+
+false --
+
+Perfect 
+Now we found the real problem.
+
+Auth::check() returning false means:
+
+ You are NOT logged in using Laravel authentication system.
+
+That is why:
+
+Auth::user() = null
+
+Edit page shows null
+
+Update does nothing
+
+ WHY THIS IS HAPPENING
+
+You built custom login using session, not Laravel Auth.
+
+Something like this is probably inside your LoginController:
+
+session(['user_id' => $user->id]);   -->,
+
+Laravel doesn’t know this is a logged-in user.
+
+So Auth::check() returns false.
+
+ NOW WE FIX IT PROPERLY (FINAL SOLUTION)
+
+Follow exactly.
+
+ STEP 1 — Fix LoginController
+
+Open LoginController.php
+
+Add at top:
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+
+Now replace your login method with THIS:
+
+public function checkLogin(Request $request)
+{
+    $credentials = $request->only('email', 'password');
+
+    if (Auth::attempt($credentials)) {
+
+        return redirect('/home');   // successful login
+    }
+
+    return back()->with('error', 'Invalid credentials');
+}
+
+ DELETE any manual session code.
+
+STEP 2 — Fix Register (Very Important)
+
+Make sure password is hashed:
+
+use Illuminate\Support\Facades\Hash;
+
+public function register(Request $request)
+{
+    User::create([
+        'name' => $request->username,
+        'email' => $request->email,
+        'mobile' => $request->phone,
+        'password' => Hash::make($request->password), // MUST
+        'status' => 'unverified'
+    ]);
+
+    return redirect('/login');
+}
+
+If password is not hashed → login will fail.
+
+ STEP 3 — Protect User Routes Using Default auth Middleware
+
+In routes/web.php
+
+Outside admin prefix, add:
+
+Route::middleware(['auth'])->group(function(){
+
+    Route::get('/edit-profile', [ProfileController::class, 'edit']);
+    Route::post('/update-profile', [ProfileController::class, 'update']);
+
+});
+
+REMOVE it from inside:
+
+Route::prefix('admin')
+ STEP 4 — Logout Fix
+
+In LoginController:
+
+public function logout()
+{
+    Auth::logout();
+    return redirect('/login');
+}
+ STEP 5 — Test
+
+Now:
+
+Register new user
+
+Login
+
+Add inside edit():
+
+dd(Auth::check());
+
+Now it should print:
+
+true 
+WHY THIS FIX WORKS
+
+When you use:
+
+Auth::attempt()
