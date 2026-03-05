@@ -1,0 +1,79 @@
+1️.Route (web.php)
+
+Add this inside your auth middleware group.
+
+use App\Http\Controllers\ProfileController;
+
+Route::middleware(['auth'])->group(function () {
+
+    Route::get('/change-password', [ProfileController::class, 'changePasswordForm'])->name('change.password');
+
+    Route::post('/change-password', [ProfileController::class, 'changePassword'])->name('update.password');
+
+});
+2️.Controller (ProfileController.php)
+
+Add these functions.
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
+
+public function changePasswordForm()
+{
+    return view('change-password');
+}
+
+public function changePassword(Request $request)
+{
+    $request->validate([
+        'current_password' => 'required',
+        'new_password' => 'required|min:6',
+        'confirm_password' => 'required|same:new_password'
+    ]);
+
+    $user = Auth::user();
+
+    if(!Hash::check($request->current_password, $user->password)){
+        return back()->with('error','Current password is incorrect');
+    }
+
+    $user->password = Hash::make($request->new_password);
+    $user->save();
+
+    return back()->with('success','Password changed successfully');
+}
+3️.Blade Page (resources/views/change-password.blade.php)
+<h2>Change Password</h2>
+
+@if(session('success'))
+<p style="color:green">{{ session('success') }}</p>
+@endif
+
+@if(session('error'))
+<p style="color:red">{{ session('error') }}</p>
+@endif
+
+<form method="POST" action="{{ route('update.password') }}">
+@csrf
+
+<label>Current Password</label>
+<input type="password" name="current_password" required>
+<br><br>
+
+<label>New Password</label>
+<input type="password" name="new_password" required>
+<br><br>
+
+<label>Confirm Password</label>
+<input type="password" name="confirm_password" required>
+<br><br>
+
+<button type="submit">Update Password</button>
+
+</form>
+4️.Open Page
+
+Go to:
+
+http://127.0.0.1:8000/change-password
