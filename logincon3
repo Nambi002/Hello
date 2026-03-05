@@ -1,0 +1,272 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+
+/*
+class LoginController extends Controller
+{
+    public function index()
+    {
+        return view('login');
+    }
+    public function showRegister()
+    {
+        
+        return view('register');
+    }
+    //25/02//
+  
+    public function admin()
+    {
+        return view('userlogin');
+    }
+       
+//25/02//
+    public function register(Request $request)
+    {
+        // if ($request->password != $request->confirm_password) {
+            //return back()->with('error', 'Password and Confirm Password do not match');
+        //  }
+            
+        DB::table('users')->insert([
+            'name' => $request->username,
+            'email' => $request->email,
+            'mobile' => $request->phone,
+            'password' => $request->password,
+            'status' => 'unverified'
+
+        ]);
+        return redirect('/')->with('success', 'Registration Successful! Please Login');
+    }
+*/
+/* //4/3/- 10:04 ///
+public function register(Request $request)
+{
+    $request->validate([
+        'name' => 'required',
+        'email' => 'required|email|unique:users',
+        'password' => 'required|min:6'
+    ]);
+
+    User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password), // VERY IMPORTANT
+    ]);
+
+    return redirect()->route('login');
+}   
+
+    public function checkLogin(Request $request)
+    {
+       // $username = $request->username;
+        $password = $request->password;
+        $email = $request->email;
+
+        $user = DB::table('users')
+           // ->where('username', $username)
+            ->where('email', $email)
+            ->where('password', $password)
+            ->first();
+
+        if ($user) {
+            return redirect('/home');
+        } else {
+            return back()->with('error', 'Login Failed! Wrong Username or Password');
+        }
+        //27/02//
+        if ($user->status != 'verified') {
+            return back()->with('error', 'Wait for admin verification');
+        }
+
+        session(['user_id' => $user->id]);
+         //27/02//
+    }
+  //4/3//
+/* 4/3/ - 10:06 //
+public function checkLogin(Request $request)
+{
+    $credentials = $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
+
+        dd(Auth::attempt($credentials));
+
+    if (Auth::attempt($credentials)) {
+
+        $request->session()->regenerate();
+
+        return redirect()->route('home');
+    }
+
+    return back()->with('error', 'Invalid email or password');
+}
+
+//4/3//
+
+    public function home()
+    {
+        return view('home');
+    }
+    //27/02//
+      public function logout()
+    {
+        session()->forget('user_id');
+        return redirect('/login');
+    }
+    //27/02//
+
+//25/02//
+  /*  public function userLogin(Request $request)
+    {
+        $username = $request->username;
+        $password = $request->password;
+
+        $user = DB::table('data')
+            ->where('username', $username)
+            ->where('password', $password)
+            ->first();
+
+        
+     if ($username === 'admin' && $password === '1234') {
+
+            // Create Admin Session
+            session(['admin_logged_in' => true]);
+
+            return redirect('/admin');
+        }
+
+        return back()->with('error', 'Invalid Admin Credentials');
+    }
+
+//25/02//
+
+}
+*/
+
+
+class LoginController extends Controller
+{
+    public function index()
+    {
+        return view('login');
+    }
+
+    public function showRegister()
+    {
+        return view('register');
+    }
+
+    public function register(Request $request)
+    {
+        // if ($request->password != $request->confirm_password) {
+            //return back()->with('error', 'Password and Confirm Password do not match');
+        //  }
+      
+        DB::table('users')->insert([
+            'name' => $request->username,
+            'email' => $request->email,
+            'mobile' => $request->phone,
+            'password' => $request->password,
+            'status' => 'unverified'
+
+        ]);
+        return redirect('/login')->with('success', 'Registration Successful! Please Login');
+    }
+
+    public function checkLogin(Request $request)
+    {
+       // $username = $request->username;
+        $password = $request->password;
+        $email = $request->email;
+
+        $user = DB::table('users')
+           // ->where('username', $username)
+            ->where('email', $email)
+            ->where('password', $password)
+            ->first();
+
+           // Auth::login($user); 
+
+
+        if ($user) {
+            return redirect('/home');
+        } else {
+            return back()->with('error', 'Login Failed! Wrong Username or Password');
+        }
+        //27/02//
+       /* if ($user->status != 'verified') {
+            return back()->with('error', 'Wait for admin verification');
+        }
+
+        session(['user_id' => $user->id]); */
+         //27/02//
+    }
+
+    public function showLogin()
+    {
+        return view('login');
+    }
+
+    public function login(Request $request)
+  {
+        $user = User::where('email',$request->email)->first();
+
+        if(!$user || !Hash::check($request->password,$user->password)){
+            return back()->with('error','Invalid credentials');
+        }
+
+        if($user->status != 'verified'){
+            return back()->with('error','Wait for admin verification');
+        }
+
+        session(['user_id'=>$user->id]);
+
+        return redirect('/home');
+    }
+}
+    /*    {
+    $credentials = $request->only('email','password');
+
+    if(Auth::attempt($credentials))
+    {
+        return redirect('index');
+    }
+    else
+    {
+        return back()->with('error','Invalid Email or Password');
+    }
+}
+
+    public function logout(Request $request)
+    {
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/login');
+    }
+
+     public function home()
+    {
+        return view('home');
+    }
+}
+
+*/
+
+
+
+
+
+
+
+
+
