@@ -1,0 +1,18 @@
+loginconteoller 
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+
+public function login(Request $request)
+{
+    $credentials = $request->only('email','password');
+
+    if(Auth::attempt($credentials))
+    {
+        return redirect('index');
+    }
+    else
+    {
+        return back()->with('error','Invalid Email or Password');
+    }
+}
