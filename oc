@@ -162,3 +162,15 @@ class ProfileController extends Controller
 Route::get('index', [ProfileController::class, 'index']);
 Route::get('edit-profile/{id}', [ProfileController::class, 'edit']);
 Route::put('update-profile/{id}', [ProfileController::class, 'update']);
+
+
+
+----------------------------------
+
+in edit page it show all user data but i need only To retrieve the specific user who is currently logged in
+
+
+
+
+
+
