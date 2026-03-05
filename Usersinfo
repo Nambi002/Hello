@@ -1,0 +1,253 @@
+migratio
+
+$table->id();
+$table->string('name');
+$table->string('email')->unique();
+$table->string('mobile')->nullable();
+$table->string('password');
+$table->string('status')->default('unverified');
+$table->timestamps();
+
+user model
+
+protected $fillable = [
+    'name',
+    'email',
+    'mobile',
+    'password',
+    'status'
+];
+
+protected $hidden = [
+    'password'
+];
+
+
+routes
+
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ProfileController;
+
+Route::get('/login',[LoginController::class,'showLogin'])->name('login');
+Route::post('/login',[LoginController::class,'login']);
+
+Route::get('/register',[LoginController::class,'showRegister']);
+Route::post('/register',[LoginController::class,'register']);
+
+Route::middleware(['auth'])->group(function(){
+
+    Route::get('/home',[ProfileController::class,'home']);
+
+    Route::get('/profile',[ProfileController::class,'index']);
+    Route::get('/edit-profile',[ProfileController::class,'edit']);
+    Route::put('/update-profile',[ProfileController::class,'update']);
+
+    Route::get('/change-password',[ProfileController::class,'passwordForm']);
+    Route::post('/change-password',[ProfileController::class,'changePassword']);
+
+    Route::post('/logout',[LoginController::class,'logout']);
+
+});
+
+lc
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+
+class LoginController extends Controller
+{
+
+public function showLogin()
+{
+    return view('login');
+}
+
+public function showRegister()
+{
+    return view('register');
+}
+
+public function register(Request $request)
+{
+    User::create([
+        'name'=>$request->name,
+        'email'=>$request->email,
+        'mobile'=>$request->mobile,
+        'password'=>Hash::make($request->password),
+        'status'=>'unverified'
+    ]);
+
+    return redirect('/login')->with('success','Registered successfully');
+}
+
+public function login(Request $request)
+{
+
+    $user = User::where('email',$request->email)->first();
+
+    if(!$user || !Hash::check($request->password,$user->password))
+    {
+        return back()->with('error','Invalid credentials');
+    }
+
+    if($user->status!='verified')
+    {
+        return back()->with('error','Wait for admin verification');
+    }
+
+    Auth::login($user);
+
+    return redirect('/home');
+}
+
+public function logout()
+{
+    Auth::logout();
+    return redirect('/login');
+}
+
+}
+
+pc
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+
+class ProfileController extends Controller
+{
+
+public function home()
+{
+    return view('home');
+}
+
+public function index()
+{
+    $user = Auth::user();
+    return view('profile',compact('user'));
+}
+
+public function edit()
+{
+    $user = Auth::user();
+    return view('edit',compact('user'));
+}
+
+public function update(Request $request)
+{
+    $user = Auth::user();
+
+    $user->name=$request->name;
+    $user->email=$request->email;
+    $user->mobile=$request->mobile;
+
+    $user->save();
+
+    return back()->with('success','Profile updated');
+}
+
+public function passwordForm()
+{
+    return view('change_password');
+}
+
+public function changePassword(Request $request)
+{
+    $user = Auth::user();
+
+    if(!Hash::check($request->current_password,$user->password))
+    {
+        return back()->with('error','Current password wrong');
+    }
+
+    $user->password=Hash::make($request->new_password);
+    $user->save();
+
+    return back()->with('success','Password changed');
+}
+
+}
+
+
+login
+
+<form method="POST" action="/login">
+@csrf
+
+<input type="email" name="email" placeholder="Email">
+
+<input type="password" name="password" placeholder="Password">
+
+<button type="submit">Login</button>
+
+<a href="/register">Register</a>
+
+</form>
+
+
+reg
+<form method="POST" action="/register">
+@csrf
+
+<input type="text" name="name" placeholder="Name">
+
+<input type="email" name="email" placeholder="Email">
+
+<input type="text" name="mobile" placeholder="Mobile">
+
+<input type="password" name="password" placeholder="Password">
+
+<button type="submit">Register</button>
+
+</form>
+
+profile
+
+<h2>Profile</h2>
+
+Name: {{ $user->name }} <br>
+Email: {{ $user->email }} <br>
+Mobile: {{ $user->mobile }} <br>
+
+<a href="/edit-profile">Edit Profile</a>
+
+<a href="/change-password">Change Password</a>
+
+<form action="/logout" method="POST">
+@csrf
+<button type="submit">Logout</button>
+</form>
+
+edit 
+<form method="POST" action="/update-profile">
+@csrf
+@method('PUT')
+
+<input type="text" name="name" value="{{ $user->name }}">
+
+<input type="email" name="email" value="{{ $user->email }}">
+
+<input type="text" name="mobile" value="{{ $user->mobile }}">
+
+<button type="submit">Update</button>
+
+</form>
+
+co
+<form method="POST" action="/change-password">
+@csrf
+
+<input type="password" name="current_password" placeholder="Current Password">
+
+<input type="password" name="new_password" placeholder="New Password">
+
+<button type="submit">Change Password</button>
+
+</form>
