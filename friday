@@ -1,0 +1,371 @@
+Database Structure
+users table fields
+$table->id();
+$table->string('name');
+$table->string('email')->unique();
+$table->string('mobile');
+$table->string('password');
+$table->string('profile_image')->nullable();
+
+$table->enum('role',['user','admin'])->default('user');
+
+$table->enum('status',[
+    'unverified',
+    'verified',
+    'inactive'
+])->default('unverified');
+
+$table->timestamps();
+
+Run:
+
+php artisan migrate
+---------------------------
+Folder Structure
+---------------------------
+app
+ ├── Http
+ │    ├── Controllers
+ │    │     ├── User
+ │    │     │      AuthController.php
+ │    │     │      ProfileController.php
+ │    │     ├── Admin
+ │    │     │      AdminAuthController.php
+ │    │     │      UserManagementController.php
+ │    │
+ │    ├── Middleware
+ │          UserAuth.php
+ │          AdminAuth.php
+---------------------------
+Routes Structure
+---------------------------
+
+routes/web.php
+
+User Routes
+use App\Http\Controllers\User\AuthController;
+use App\Http\Controllers\User\ProfileController;
+
+Route::prefix('user')->group(function(){
+
+Route::get('/login',[AuthController::class,'loginForm']);
+Route::post('/login',[AuthController::class,'login']);
+
+Route::get('/register',[AuthController::class,'registerForm']);
+Route::post('/register',[AuthController::class,'register']);
+
+Route::middleware('userauth')->group(function(){
+
+Route::get('/dashboard',[ProfileController::class,'dashboard']);
+
+Route::get('/edit-profile',[ProfileController::class,'edit']);
+Route::post('/update-profile',[ProfileController::class,'update']);
+
+Route::get('/change-password',[ProfileController::class,'passwordForm']);
+Route::post('/change-password',[ProfileController::class,'changePassword']);
+
+Route::post('/logout',[AuthController::class,'logout']);
+
+});
+
+});
+Admin Routes
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\UserManagementController;
+
+Route::prefix('admin')->group(function(){
+
+Route::get('/login',[AdminAuthController::class,'loginForm']);
+Route::post('/login',[AdminAuthController::class,'login']);
+
+Route::middleware('adminauth')->group(function(){
+
+Route::get('/dashboard',[UserManagementController::class,'dashboard']);
+
+Route::get('/unverified-users',[UserManagementController::class,'unverified']);
+Route::get('/verified-users',[UserManagementController::class,'verified']);
+Route::get('/inactive-users',[UserManagementController::class,'inactive']);
+
+Route::post('/verify-user/{id}',[UserManagementController::class,'verifyUser']);
+Route::post('/deactivate-user/{id}',[UserManagementController::class,'deactivateUser']);
+
+Route::post('/logout',[AdminAuthController::class,'logout']);
+
+});
+
+});
+---------------------------
+Middleware
+---------------------------
+UserAuth Middleware
+php artisan make:middleware UserAuth
+public function handle($request, Closure $next)
+{
+    if(!session()->has('user_id')){
+        return redirect('/user/login');
+    }
+
+    return $next($request);
+}
+AdminAuth Middleware
+php artisan make:middleware AdminAuth
+public function handle($request, Closure $next)
+{
+    if(!session()->has('admin_id')){
+        return redirect('/admin/login');
+    }
+
+    return $next($request);
+}
+
+Register in Kernel.php
+
+'userauth' => \App\Http\Middleware\UserAuth::class,
+'adminauth' => \App\Http\Middleware\AdminAuth::class,
+---------------------------
+User Register
+---------------------------
+public function register(Request $request)
+{
+
+User::create([
+
+'name'=>$request->name,
+'email'=>$request->email,
+'mobile'=>$request->mobile,
+'password'=>Hash::make($request->password),
+
+'role'=>'user',
+'status'=>'unverified'
+
+]);
+
+return redirect('/user/login');
+}
+---------------------------
+User Login
+---------------------------
+public function login(Request $request)
+{
+
+$user = User::where('email',$request->email)
+            ->where('role','user')
+            ->first();
+
+if(!$user || !Hash::check($request->password,$user->password))
+{
+    return back()->with('error','Invalid credentials');
+}
+
+if($user->status != 'verified')
+{
+    return back()->with('error','Admin not verified your account');
+}
+
+session([
+'user_id'=>$user->id
+]);
+
+return redirect('/user/dashboard');
+
+}
+---------------------------
+Admin Login
+---------------------------
+public function login(Request $request)
+{
+
+$admin = User::where('email',$request->email)
+             ->where('role','admin')
+             ->first();
+
+if(!$admin || !Hash::check($request->password,$admin->password))
+{
+    return back()->with('error','Invalid credentials');
+}
+
+session([
+'admin_id'=>$admin->id
+]);
+
+return redirect('/admin/dashboard');
+
+}
+
+This ensures:
+
+✔ User login cannot use admin credentials
+✔ Admin login cannot use user credentials
+---------------------------
+Edit Profile
+---------------------------
+User can update:
+
+• profile picture
+• name
+• mobile
+
+public function update(Request $request)
+{
+
+$user = User::find(session('user_id'));
+
+if($request->hasFile('image'))
+{
+
+$image = $request->file('image')->store('profiles','public');
+
+$user->profile_image = $image;
+
+}
+
+$user->name = $request->name;
+$user->mobile = $request->mobile;
+
+$user->save();
+
+return back()->with('success','Profile updated');
+
+}
+---------------------------
+Change Password
+---------------------------
+public function changePassword(Request $request)
+{
+
+$user = User::find(session('user_id'));
+
+if(!Hash::check($request->current_password,$user->password))
+{
+return back()->with('error','Current password wrong');
+}
+
+$user->password = Hash::make($request->new_password);
+
+$user->save();
+
+return back()->with('success','Password updated');
+
+}
+---------------------------
+Admin User Management
+---------------------------
+Unverified Users
+public function unverified()
+{
+
+$users = User::where('status','unverified')->get();
+
+return view('admin.unverified',compact('users'));
+
+}
+Verify User
+public function verifyUser($id)
+{
+
+$user = User::find($id);
+
+$user->status = 'verified';
+
+$user->save();
+
+return back();
+
+}
+Verified Users
+public function verified()
+{
+
+$users = User::where('status','verified')->get();
+
+return view('admin.verified',compact('users'));
+
+}
+Inactive Users
+public function inactive()
+{
+
+$users = User::where('status','inactive')->get();
+
+return view('admin.inactive',compact('users'));
+
+}
+Deactivate User
+public function deactivateUser($id)
+{
+
+$user = User::find($id);
+
+$user->status = 'inactive';
+
+$user->save();
+
+return back();
+
+}
+---------------------------
+ Session Destroy (Logout)
+----------------------------
+User
+public function logout()
+{
+session()->forget('user_id');
+return redirect('/user/login');
+}
+Admin
+public function logout()
+{
+session()->forget('admin_id');
+return redirect('/admin/login');
+}
+---------------
+ Header Layout
+---------------
+Left → Logo
+Right → Logout Button
+
+Blade example:
+
+<div class="header">
+
+<div class="logo">
+LOGO
+</div>
+
+<div class="logout">
+
+<form action="/user/logout" method="POST">
+@csrf
+<button>Logout</button>
+</form>
+
+</div>
+
+</div>
+ Final System Flow
+User
+Register
+ ↓
+Admin Approval
+ ↓
+Login
+ ↓
+Dashboard
+ ↓
+Edit Profile
+ ↓
+Change Password
+ ↓
+Logout
+Admin
+Login
+ ↓
+Unverified Users
+ ↓
+Verify User
+ ↓
+Verified Users
+ ↓
+Deactivate User
+ ↓
+Inactive Users
