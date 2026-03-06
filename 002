@@ -1,0 +1,1036 @@
+Step 1: Create Laravel Project
+
+Open terminal.
+
+composer create-project laravel/laravel user_admin_system
+
+Go to project folder.
+
+cd user_admin_system
+
+Run project.
+
+php artisan serve
+
+Open browser:
+
+http://127.0.0.1:8000
+Step 2: Configure Database
+
+Open .env file.
+
+Update database settings.
+
+DB_DATABASE=user_admin
+DB_USERNAME=root
+DB_PASSWORD=
+
+Create database in phpMyAdmin.
+
+user_admin
+Step 3: Create Migration
+
+Run command:
+
+php artisan make:migration create_users_table
+
+Open file:
+
+database/migrations/xxxx_create_users_table.php
+
+Update code:
+
+public function up()
+{
+    Schema::create('users', function (Blueprint $table) {
+
+        $table->id();
+
+        $table->string('name');
+        $table->string('email')->unique();
+        $table->string('mobile');
+
+        $table->string('password');
+
+        $table->string('profile_image')->nullable();
+
+        $table->enum('role',['user','admin'])->default('user');
+
+        $table->enum('status',[
+            'unverified',
+            'verified',
+            'inactive'
+        ])->default('unverified');
+
+        $table->timestamps();
+    });
+}
+
+Run migration.
+
+php artisan migrate
+Step 4: Create Controllers
+
+Create controllers.
+
+php artisan make:controller User/AuthController
+php artisan make:controller User/ProfileController
+
+php artisan make:controller Admin/AdminAuthController
+php artisan make:controller Admin/UserManagementController
+Step 5: Create Middleware
+
+Create middleware.
+
+php artisan make:middleware UserAuth
+php artisan make:middleware AdminAuth
+
+Open:
+
+app/Http/Middleware/UserAuth.php
+
+Code:
+
+public function handle($request, Closure $next)
+{
+    if(!session()->has('user_id')){
+        return redirect('/user/login');
+    }
+
+    return $next($request);
+}
+
+Open:
+
+app/Http/Middleware/AdminAuth.php
+
+Code:
+
+public function handle($request, Closure $next)
+{
+    if(!session()->has('admin_id')){
+        return redirect('/admin/login');
+    }
+
+    return $next($request);
+}
+
+Register middleware.
+
+Open:
+
+app/Http/Kernel.php
+
+Add inside $routeMiddleware.
+
+'userauth' => \App\Http\Middleware\UserAuth::class,
+'adminauth' => \App\Http\Middleware\AdminAuth::class,
+Step 6: Create Routes
+
+Open:
+
+routes/web.php
+
+User routes:
+
+use App\Http\Controllers\User\AuthController;
+use App\Http\Controllers\User\ProfileController;
+
+Route::prefix('user')->group(function(){
+
+Route::get('/login',[AuthController::class,'loginForm']);
+Route::post('/login',[AuthController::class,'login']);
+
+Route::get('/register',[AuthController::class,'registerForm']);
+Route::post('/register',[AuthController::class,'register']);
+
+Route::middleware('userauth')->group(function(){
+
+Route::get('/dashboard',[ProfileController::class,'dashboard']);
+
+Route::get('/edit-profile',[ProfileController::class,'edit']);
+Route::post('/update-profile',[ProfileController::class,'update']);
+
+Route::get('/change-password',[ProfileController::class,'passwordForm']);
+Route::post('/change-password',[ProfileController::class,'changePassword']);
+
+Route::post('/logout',[AuthController::class,'logout']);
+
+});
+
+});
+
+Admin routes:
+
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\UserManagementController;
+
+Route::prefix('admin')->group(function(){
+
+Route::get('/login',[AdminAuthController::class,'loginForm']);
+Route::post('/login',[AdminAuthController::class,'login']);
+
+Route::middleware('adminauth')->group(function(){
+
+Route::get('/dashboard',[UserManagementController::class,'dashboard']);
+
+Route::get('/unverified-users',[UserManagementController::class,'unverified']);
+
+Route::get('/verified-users',[UserManagementController::class,'verified']);
+
+Route::get('/inactive-users',[UserManagementController::class,'inactive']);
+
+Route::post('/verify-user/{id}',[UserManagementController::class,'verifyUser']);
+
+Route::post('/deactivate-user/{id}',[UserManagementController::class,'deactivateUser']);
+
+Route::post('/logout',[AdminAuthController::class,'logout']);
+
+});
+
+});
+Step 7: User Register
+
+Open:
+
+app/Http/Controllers/User/AuthController.php
+
+Add:
+
+public function register(Request $request)
+{
+
+User::create([
+
+'name'=>$request->name,
+'email'=>$request->email,
+'mobile'=>$request->mobile,
+
+'password'=>Hash::make($request->password),
+
+'role'=>'user',
+'status'=>'unverified'
+
+]);
+
+return redirect('/user/login');
+
+}
+Step 8: User Login
+public function login(Request $request)
+{
+
+$user = User::where('email',$request->email)
+            ->where('role','user')
+            ->first();
+
+if(!$user || !Hash::check($request->password,$user->password))
+{
+    return back()->with('error','Invalid credentials');
+}
+
+if($user->status != 'verified')
+{
+    return back()->with('error','Admin not verified your account');
+}
+
+session(['user_id'=>$user->id]);
+
+return redirect('/user/dashboard');
+
+}
+Step 9: Edit Profile
+
+Open:
+
+ProfileController.php
+public function edit()
+{
+
+$user = User::find(session('user_id'));
+
+return view('user.edit',compact('user'));
+
+}
+
+Update profile.
+
+public function update(Request $request)
+{
+
+$user = User::find(session('user_id'));
+
+if($request->hasFile('image')){
+
+$image = $request->file('image')->store('profiles','public');
+
+$user->profile_image = $image;
+
+}
+
+$user->name = $request->name;
+
+$user->mobile = $request->mobile;
+
+$user->save();
+
+return back();
+
+}
+Step 10: Change Password
+public function changePassword(Request $request)
+{
+
+$user = User::find(session('user_id'));
+
+if(!Hash::check($request->current_password,$user->password)){
+
+return back()->with('error','Wrong current password');
+
+}
+
+$user->password = Hash::make($request->new_password);
+
+$user->save();
+
+return back()->with('success','Password changed');
+
+}
+Step 11: Admin Verify User
+
+Open:
+
+UserManagementController.php
+
+Unverified users:
+
+public function unverified()
+{
+
+$users = User::where('status','unverified')->get();
+
+return view('admin.unverified',compact('users'));
+
+}
+
+Verify user:
+
+public function verifyUser($id)
+{
+
+$user = User::find($id);
+
+$user->status='verified';
+
+$user->save();
+
+return back();
+
+}
+Step 12: Deactivate User
+public function deactivateUser($id)
+{
+
+$user = User::find($id);
+
+$user->status='inactive';
+
+$user->save();
+
+return back();
+
+}
+Step 13: Logout
+
+User logout:
+
+public function logout()
+{
+
+session()->forget('user_id');
+
+return redirect('/user/login');
+
+}
+
+Admin logout:
+
+public function logout()
+{
+
+session()->forget('admin_id');
+
+return redirect('/admin/login');
+
+}
+System Flow
+
+User:
+
+Register
+↓
+Admin verification
+↓
+Login
+↓
+Dashboard
+↓
+Edit Profile
+↓
+Change Password
+↓
+Logout
+
+Admin:
+
+Admin Login
+↓
+Unverified Users
+↓
+Verify User
+↓
+Verified Users
+↓
+Deactivate User
+↓
+Inactive Users
+
+
+
+--------------------------------------------------
+
+1. Password Validation Rules
+
+Password must contain:
+
+Minimum 8 characters
+
+1 Uppercase letter
+
+1 Lowercase letter
+
+1 Number
+
+1 Special character
+
+Example valid password:
+
+Admin@123
+User@2026
+2. Register Blade Example
+
+resources/views/auth/register.blade.php
+
+<form method="POST" action="{{ route('register') }}">
+@csrf
+
+<input type="text" name="name" placeholder="Name" required>
+
+<input type="email" name="email" placeholder="Email" required>
+
+<input type="text" name="mobile" placeholder="Mobile" required>
+
+<div style="position:relative">
+<input type="password" id="password" name="password" placeholder="Password" required>
+<span onclick="togglePassword()" style="cursor:pointer">👁</span>
+</div>
+
+<input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
+
+<p id="message"></p>
+
+<button type="submit">Register</button>
+
+</form>
+3. JavaScript Password Validation
+
+Add this below the form
+
+<script>
+
+let password = document.getElementById("password");
+let confirm_password = document.getElementById("confirm_password");
+let message = document.getElementById("message");
+
+password.addEventListener("keyup", function(){
+
+    let value = password.value;
+
+    let pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+    if(pattern.test(value)){
+        message.innerHTML = "Strong Password";
+        message.style.color = "green";
+    }else{
+        message.innerHTML = "Password must contain 8 characters, uppercase, lowercase, number and special character";
+        message.style.color = "red";
+    }
+
+});
+
+
+confirm_password.addEventListener("keyup", function(){
+
+    if(password.value === confirm_password.value){
+        message.innerHTML = "Password Matched";
+        message.style.color = "green";
+    }else{
+        message.innerHTML = "Password Not Matched";
+        message.style.color = "red";
+    }
+
+});
+
+</script>
+4. Show / Hide Password Icon
+
+Add this below the previous script
+
+<script>
+
+function togglePassword(){
+
+    let pass = document.getElementById("password");
+
+    if(pass.type === "password"){
+        pass.type = "text";
+    }else{
+        pass.type = "password";
+    }
+
+}
+
+</script>
+5. Laravel Backend Password Validation
+
+In your controller (RegisterController)
+
+$request->validate([
+'name' => 'required',
+'email' => 'required|email|unique:users',
+'mobile' => 'required',
+'password' => [
+'required',
+'confirmed',
+'min:8',
+'regex:/[a-z]/',
+'regex:/[A-Z]/',
+'regex:/[0-9]/',
+'regex:/[@$!%*?&]/'
+]
+]);
+6. Hash Password (IMPORTANT)
+use Illuminate\Support\Facades\Hash;
+
+$user->password = Hash::make($request->password);
+
+This avoids the error:
+
+This password does not use bcrypt algorithm
+7. Login Password Check
+if(Hash::check($request->password,$user->password)){
+    // login success
+}
+8. Change Password Page Fields
+Current Password
+New Password
+Confirm New Password
+
+Password validation same JS can be reused.
+
+9. Optional (Better Eye Icon)
+
+Instead of emoji you can use:
+
+<i class="fa fa-eye"></i>
+
+Add FontAwesome:
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css
+
+
+---------------------------------------------------------------
+
+
+
+1. Store User Session After Login
+
+Inside your Login Controller
+
+use Illuminate\Support\Facades\Session;
+
+public function login(Request $request)
+{
+
+    $user = User::where('email',$request->email)->first();
+
+    if($user){
+
+        if(Hash::check($request->password,$user->password)){
+
+            Session::put('user_id',$user->id);
+
+            return redirect('/dashboard');
+
+        }
+
+    }
+
+    return back()->with('error','Invalid login');
+
+}
+
+Now the logged user id is stored in session
+
+session('user_id')
+2. Create Edit Profile Route
+
+routes/web.php
+
+Route::get('/edit-profile',[UserController::class,'edit'])->middleware('userAuth');
+Route::post('/update-profile',[UserController::class,'update'])->middleware('userAuth');
+3. Controller for Edit Profile
+
+Create controller if not created
+
+php artisan make:controller UserController
+
+Inside UserController.php
+
+use App\Models\User;
+use Illuminate\Support\Facades\Session;
+
+public function edit()
+{
+
+    $user = User::find(Session::get('user_id'));
+
+    return view('edit',compact('user'));
+
+}
+
+This ensures only logged user data is fetched.
+
+4. Edit Blade Page
+
+resources/views/edit.blade.php
+
+<form action="/update-profile" method="POST" enctype="multipart/form-data">
+@csrf
+
+Name
+<input type="text" name="name" value="{{ $user->name }}">
+
+Mobile
+<input type="text" name="mobile" value="{{ $user->mobile }}">
+
+Profile Image
+<input type="file" name="profile_image">
+
+<button type="submit">Update</button>
+
+</form>
+5. Update Controller Function
+
+In UserController.php
+
+public function update(Request $request)
+{
+
+    $user = User::find(Session::get('user_id'));
+
+    $user->name = $request->name;
+    $user->mobile = $request->mobile;
+
+    if($request->hasFile('profile_image')){
+
+        $file = $request->file('profile_image');
+        $filename = time().'.'.$file->getClientOriginalExtension();
+        $file->move('profile_images',$filename);
+
+        $user->profile_image = $filename;
+
+    }
+
+    $user->save();
+
+    return redirect('/dashboard')->with('success','Profile Updated');
+
+}
+6. Middleware (Important)
+
+Create middleware
+
+php artisan make:middleware UserAuth
+
+Inside middleware
+
+use Illuminate\Support\Facades\Session;
+
+public function handle($request, Closure $next)
+{
+
+    if(!Session::has('user_id')){
+        return redirect('/login');
+    }
+
+    return $next($request);
+
+}
+
+Register it in
+
+app/Http/Kernel.php
+'userAuth' => \App\Http\Middleware\UserAuth::class,
+7. Why you got this error earlier
+
+Error:
+
+Attempt to read property "name" on null
+
+Reason:
+
+$user variable was empty
+
+Because logged user was not fetched properly.
+
+Now this line fixes it:
+
+$user = User::find(Session::get('user_id'));
+8. Result
+
+Edit page will show only logged user details
+
+User can update:
+
+name
+
+mobile
+
+profile image
+
+User cannot edit other users.
+
+If you want, I can also give you the complete Laravel structure for your whole assignment:
+
+User Login
+
+Register
+
+Edit Profile
+
+Change Password
+
+Admin Login
+
+Unverified Users
+
+Verified Users
+
+Delete / Inactive Users
+
+Middleware
+
+Session
+
+Sidebar layout
+
+in a clean step-by-step beginner format.
+
+ypu provide logincontroller ? before u not give logincontroller . are logincontroller and authcintroller are same ?
+
+No. LoginController and AuthController are not exactly the same, but many beginners use one controller (AuthController) to handle both register and login.
+
+Let me explain clearly.
+
+1. AuthController
+
+Usually used to handle all authentication actions.
+
+Example responsibilities:
+
+Register user
+
+Login user
+
+Logout user
+
+Change password
+
+Example:
+
+AuthController
+
+Functions inside:
+
+register()
+login()
+logout()
+changePassword()
+
+So one controller manages all authentication logic.
+
+2. LoginController
+
+This controller handles only login-related logic.
+
+Example:
+
+LoginController
+
+Functions inside:
+
+login()
+logout()
+
+Register will be in another controller like:
+
+RegisterController
+3. Which One Should You Use for Your Task?
+
+Since your assignment includes:
+
+Register
+
+Login
+
+Edit profile
+
+Change password
+
+Admin login
+
+The simplest structure for a beginner is:
+
+Controllers
+AuthController
+UserController
+AdminController
+4. Controller Responsibilities
+AuthController
+
+Handles authentication.
+
+register()
+storeRegister()
+login()
+loginCheck()
+logout()
+UserController
+
+Handles user features.
+
+dashboard()
+editProfile()
+updateProfile()
+changePassword()
+updatePassword()
+AdminController
+adminLogin()
+adminLoginCheck()
+unverifiedUsers()
+verifiedUsers()
+inactiveUsers()
+verifyUser()
+deleteUser()
+5. Example AuthController Structure
+
+app/Http/Controllers/AuthController.php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Session;
+
+class AuthController extends Controller
+{
+
+public function register()
+{
+    return view('auth.register');
+}
+
+public function storeRegister(Request $request)
+{
+
+    $user = new User();
+
+    $user->name = $request->name;
+    $user->email = $request->email;
+    $user->mobile = $request->mobile;
+    $user->password = Hash::make($request->password);
+    $user->status = 0;
+
+    $user->save();
+
+    return redirect('/login');
+}
+
+public function login()
+{
+    return view('auth.login');
+}
+
+public function loginCheck(Request $request)
+{
+
+    $user = User::where('email',$request->email)
+            ->where('status',1)
+            ->first();
+
+    if($user && Hash::check($request->password,$user->password)){
+
+        Session::put('user_id',$user->id);
+
+        return redirect('/dashboard');
+
+    }
+
+    return back()->with('error','Invalid login');
+
+}
+
+public function logout()
+{
+
+    Session::flush();
+
+    return redirect('/login');
+
+}
+
+}
+6. Routes Example
+
+routes/web.php
+
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
+
+Route::get('/register',[AuthController::class,'register']);
+Route::post('/register',[AuthController::class,'storeRegister']);
+
+Route::get('/login',[AuthController::class,'login']);
+Route::post('/login',[AuthController::class,'loginCheck']);
+
+Route::get('/logout',[AuthController::class,'logout']);
+
+Route::get('/dashboard',[UserController::class,'dashboard']);
+7. Simple Understanding
+Controller	Purpose
+AuthController	Register + Login
+UserController	Profile + Password
+AdminController	Admin panel
+
+--------------------------------------------------------
+
+dropdown
+
+
+1. Header Layout (Blade File)
+
+Create a header file.
+
+resources/views/layouts/user_header.blade.php
+
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>User Dashboard</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-light bg-light px-4">
+
+<div class="d-flex align-items-center">
+
+<img src="/logo.png" width="40">
+<span class="ms-2 fw-bold">My App</span>
+
+</div>
+
+<div class="dropdown">
+
+<button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+Account
+</button>
+
+<ul class="dropdown-menu dropdown-menu-end">
+
+<li>
+<a class="dropdown-item" href="{{ url('/edit-profile') }}">
+Edit Profile
+</a>
+</li>
+
+<li>
+<a class="dropdown-item" href="{{ url('/change-password') }}">
+Change Password
+</a>
+</li>
+
+<li>
+<a class="dropdown-item" href="{{ url('/logout') }}">
+Logout
+</a>
+</li>
+
+</ul>
+
+</div>
+
+</nav>
+2. Use Header in Dashboard Page
+
+resources/views/user/dashboard.blade.php
+
+@include('layouts.user_header')
+
+<div class="container mt-5">
+
+<h3>User Dashboard</h3>
+
+<p>Welcome to dashboard</p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
+3. Routes
+
+routes/web.php
+
+Route::get('/dashboard',[UserController::class,'dashboard']);
+
+Route::get('/edit-profile',[UserController::class,'editProfile']);
+
+Route::get('/change-password',[UserController::class,'changePassword']);
+
+Route::get('/logout',[AuthController::class,'logout']);
+4. UserController Example
+
+app/Http/Controllers/UserController.php
+
+public function dashboard()
+{
+    return view('user.dashboard');
+}
+
+public function editProfile()
+{
+    return view('user.edit_profile');
+}
+
+public function changePassword()
+{
+    return view('user.change_password');
+}
