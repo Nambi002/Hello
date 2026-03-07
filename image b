@@ -1,0 +1,44 @@
+Put Default Image
+
+Create a default image inside public folder
+
+public/images/default.png
+
+Example:
+
+public/images/user.png
+2️⃣ Blade File (Display Image)
+
+In your users list / profile blade
+
+<img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="80">
+Logic
+if user image exists
+    show uploaded image
+else
+    show default image
+3️⃣ Example Output
+Case 1 – Image Uploaded
+
+DB:
+
+image = user1.jpg
+
+Output:
+
+uploads/user1.jpg
+Case 2 – Image Not Uploaded
+
+DB:
+
+image = null
+
+Output:
+
+images/default.png
+4️⃣ Alternative (More Safe Method)
+<img src="{{ asset('uploads/'.$user->image) }}" 
+     onerror="this.src='{{ asset('images/default.png') }}'" 
+     width="80">
+
+This will also show default image if file is missing.
