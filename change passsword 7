@@ -1,0 +1,265 @@
+
+
+
+change password page --> step by step --> with ui and all related page
+
+Since you are using Laravel, I will show a complete Change Password feature step-by-step with:
+
+This will work for logged-in user dashboard.
+
+1️⃣ Route (web.php)
+Open routes/web.php
+
+use App\Http\Controllers\User\ProfileController;
+
+Route::middleware(['auth'])->group(function () {
+
+    Route::get('/change-password', [ProfileController::class, 'showChangePassword'])->name('password.form');
+
+    Route::post('/change-password', [ProfileController::class, 'changePassword'])->name('password.update');
+
+});
+2️⃣ Controller
+Open:
+
+app/Http/Controllers/User/ProfileController.php
+Add these functions.
+
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+
+public function showChangePassword()
+{
+    return view('user.change_password');
+}
+
+public function changePassword(Request $request)
+{
+    $request->validate([
+        'current_password' => 'required',
+        'new_password' => 'required|min:6|confirmed',
+    ]);
+
+    $user = Auth::user();
+
+    if(!Hash::check($request->current_password, $user->password)){
+        return back()->with('error','Current password is incorrect');
+    }
+
+    $user->password = Hash::make($request->new_password);
+    $user->save();
+
+    return back()->with('success','Password changed successfully');
+}
+3️⃣ Blade UI Page
+Create file:
+
+resources/views/user/change_password.blade.php
+@extends('dashboard.app')
+
+@section('content')
+
+<div class="container mt-4">
+
+<h3>Change Password</h3>
+
+@if(session('success'))
+<div class="alert alert-success">
+{{ session('success') }}
+</div>
+@endif
+
+@if(session('error'))
+<div class="alert alert-danger">
+{{ session('error') }}
+</div>
+@endif
+
+<form action="{{ route('password.update') }}" method="POST">
+@csrf
+
+<div class="mb-3">
+<label>Current Password</label>
+<input type="password" name="current_password" class="form-control" id="currentPassword">
+</div>
+
+<div class="mb-3">
+<label>New Password</label>
+<input type="password" name="new_password" class="form-control" id="newPassword">
+</div>
+
+<div class="mb-3">
+<label>Confirm Password</label>
+<input type="password" name="new_password_confirmation" class="form-control" id="confirmPassword">
+</div>
+
+<button type="submit" class="btn btn-primary">
+Update Password
+</button>
+
+</form>
+
+</div>
+
+@endsection
+4️⃣ Password Validation (JavaScript)
+Add before </body>
+
+<script>
+
+document.querySelector("form").addEventListener("submit", function(e){
+
+    let newPass = document.getElementById("newPassword").value;
+    let confirmPass = document.getElementById("confirmPassword").value;
+
+    if(newPass.length < 6){
+        alert("Password must be at least 6 characters");
+        e.preventDefault();
+    }
+
+    if(newPass !== confirmPass){
+        alert("Passwords do not match");
+        e.preventDefault();
+    }
+
+});
+
+</script>
+5️⃣ Dashboard Dropdown Link
+In dashboard navbar
+
+<li>
+<a href="{{ route('password.form') }}">Change Password</a>
+</li>
+6️⃣ UI Output
+Change Password Page:
+
+-----------------------------
+Change Password
+-----------------------------
+
+Current Password: [______]
+
+New Password: [______]
+
+Confirm Password: [______]
+
+[ Update Password ]
+7️⃣ Security Flow
+User Login
+     ↓
+Click Change Password
+     ↓
+Enter Current Password
+     ↓
+Check Hash::check()
+     ↓
+If correct → update password
+8️⃣ Folder Structure
+app
+ └ Controllers
+      └ User
+          └ ProfileController.php
+
+resources
+ └ views
+      └ user
+           └ change_password.blade.php
+ Since you are already building Login / Admin Login / Profile Edit, this Change Password module will perfectly integrate with your system.
+
+If you want, I can also show  Professional UI version (Eye icon + toggle password + Bootstrap design) which looks like modern SaaS dashboard UI.
+
+
+i got error in this line public function showChangePassword()
+{
+    return view('user.change_password');
+}---> like null 
+
+If you get null error in this line:
+
+public function showChangePassword()
+{
+    return view('user.change_password');
+}
+the problem is NOT this function. Usually one of these issues causes it.
+
+1️⃣ Check Blade File Path (Most Common Issue)
+Laravel expects this file:
+
+resources/views/user/change_password.blade.php
+Make sure:
+
+resources
+ └ views
+     └ user
+         └ change_password.blade.php
+If your file is directly inside views, then change controller:
+
+return view('change_password');
+2️⃣ Check Route
+Open routes/web.php
+
+Route::get('/change-password', [ProfileController::class, 'showChangePassword'])->name('password.form');
+If route is wrong it may break.
+
+3️⃣ Check Controller Namespace
+Your controller should start like this:
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+If you wrote:
+
+namespace App\Http\Controllers\user;
+sometimes Laravel becomes case-sensitive in some systems. Better use:
+
+User
+4️⃣ Clear Laravel Cache
+Run:
+
+php artisan route:clear
+php artisan cache:clear
+php artisan config:clear
+5️⃣ Correct Controller Code
+Your controller should look like this:
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+
+public function showChangePassword()
+{
+    return view('user.change_password');
+}
+6️⃣ If Error Says Attempt to read property on null
+Then problem is inside Blade file, like:
+
+{{ $user->name }}
+But $user is not passed.
+
+Fix:
+
+{{ auth()->user()->name }}
+ Final Working Structure
+Controller:
+
+public function showChangePassword()
+{
+    return view('user.change_password');
+}
+Blade:
+
+resources/views/user/change_password.blade.php
+Route:
+
+Route::get('/change-password', [ProfileController::class, 'showChangePassword']);
+If possible, send the exact error message screenshot or text.
+Because "null" can come from 3 different places in Laravel, and I can fix it in 1 minute if I see the exact error.
+
+
+
+
+
+
+
+
