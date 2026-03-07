@@ -1,0 +1,93 @@
+Add Image Column in Database
+
+Add a column in your table (for example users table).
+
+Example migration:
+
+$table->string('image')->nullable();
+
+If table already exists run migration:
+
+php artisan make:migration add_image_to_users_table
+
+Then inside migration:
+
+Schema::table('users', function (Blueprint $table) {
+    $table->string('image')->nullable();
+});
+
+Run:
+
+php artisan migrate
+2️⃣ Add Image Upload in Form
+
+Example register/edit form
+
+<form method="POST" action="{{ route('user.store') }}" enctype="multipart/form-data">
+@csrf
+
+<input type="file" name="image">
+
+<button type="submit">Submit</button>
+
+</form>
+
+Important:
+
+enctype="multipart/form-data"
+3️⃣ Controller Code
+
+Example in controller:
+
+public function store(Request $request)
+{
+    $request->validate([
+        'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+    ]);
+
+    $imageName = null;
+
+    if($request->hasFile('image')){
+        $imageName = time().'.'.$request->image->extension();
+        $request->image->move(public_path('uploads'), $imageName);
+    }
+
+    User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'image' => $imageName
+    ]);
+
+    return redirect()->back()->with('success','User Created');
+}
+4️⃣ Create Upload Folder
+
+Inside public folder
+
+public/uploads
+
+Images will store here.
+
+5️⃣ Show Image in Blade
+
+Example:
+
+<img src="{{ asset('uploads/'.$user->image) }}" width="100">
+6️⃣ Database Result
+id	name	email	image
+1	Nambi	test@gmail.com
+	1719999.jpg
+
+Only image name stored in DB.
+
+7️⃣ Output Result
+
+
+
+ Best Practice
+
+Do NOT store image in DB (BLOB).
+
+Always store:
+
+image name / image path
