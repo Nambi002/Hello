@@ -1,0 +1,78 @@
+Step 1: Table Button (Pass User ID)
+<button class="btn btn-success verifyBtn"
+        data-id="{{ $user->id }}"
+        data-name="{{ $user->name }}"
+        data-bs-toggle="modal"
+        data-bs-target="#verifyModal">
+Verify
+</button>
+
+This sends:
+
+user id
+
+user name
+
+to the modal.
+
+ Step 2: Modal
+<div class="modal fade" id="verifyModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Verify User</h5>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to verify <b id="username"></b> ?
+      </div>
+
+      <div class="modal-footer">
+
+        <form method="POST" action="{{ route('admin.verify') }}">
+            @csrf
+
+            <input type="hidden" name="user_id" id="user_id">
+
+            <button type="submit" class="btn btn-success">Yes</button>
+        </form>
+
+        <button class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+ Step 3: JavaScript
+document.addEventListener("DOMContentLoaded", function(){
+
+    const buttons = document.querySelectorAll(".verifyBtn");
+
+    buttons.forEach(button => {
+
+        button.addEventListener("click", function(){
+
+            let userId = this.getAttribute("data-id");
+            let userName = this.getAttribute("data-name");
+
+            document.getElementById("user_id").value = userId;
+            document.getElementById("username").innerText = userName;
+
+        });
+
+    });
+
+});
+ Result Flow
+
+Example:
+
+Admin clicks Verify for "Vanakkam S"
+
+Modal shows:
+
+Are you sure you want to verify Vanakkam S ?
+
+[ Yes ]   [ No ]
