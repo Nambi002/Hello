@@ -1,0 +1,108 @@
+User Table Buttons (Blade)
+
+Example in users table
+
+<td>
+    <!-- Verify -->
+    <button class="btn btn-success" 
+        data-bs-toggle="modal" 
+        data-bs-target="#verifyModal"
+        data-id="{{ $user->id }}">
+        Verify
+    </button>
+
+    <!-- Unverify -->
+    <button class="btn btn-warning" 
+        data-bs-toggle="modal" 
+        data-bs-target="#unverifyModal"
+        data-id="{{ $user->id }}">
+        Unverify
+    </button>
+
+    <!-- Inactive -->
+    <button class="btn btn-danger" 
+        data-bs-toggle="modal" 
+        data-bs-target="#inactiveModal"
+        data-id="{{ $user->id }}">
+        Inactive
+    </button>
+</td>
+2️⃣ Verify Modal
+<div class="modal fade" id="verifyModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Verify User</h5>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to verify this user?
+      </div>
+
+      <div class="modal-footer">
+        <form method="POST" action="{{ route('admin.verify') }}">
+            @csrf
+            <input type="hidden" name="user_id" id="verify_user_id">
+            <button type="submit" class="btn btn-success">Yes</button>
+        </form>
+
+        <button class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+3️⃣ JavaScript (Pass User ID to Modal)
+document.addEventListener("DOMContentLoaded", function () {
+
+    var verifyModal = document.getElementById('verifyModal');
+
+    verifyModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var userId = button.getAttribute('data-id');
+
+        document.getElementById('verify_user_id').value = userId;
+    });
+
+});
+
+You can repeat the same for:
+
+unverifyModal
+
+inactiveModal
+
+4️⃣ Routes
+Route::post('/admin/verify-user', [AdminController::class, 'verify'])->name('admin.verify');
+
+Route::post('/admin/unverify-user', [AdminController::class, 'unverify'])->name('admin.unverify');
+
+Route::post('/admin/inactive-user', [AdminController::class, 'inactive'])->name('admin.inactive');
+5️⃣ Controller
+public function verify(Request $request)
+{
+    $user = User::find($request->user_id);
+    $user->status = 'verified';
+    $user->save();
+
+    return back()->with('success','User verified successfully');
+}
+
+public function unverify(Request $request)
+{
+    $user = User::find($request->user_id);
+    $user->status = 'unverified';
+    $user->save();
+
+    return back()->with('success','User unverified successfully');
+}
+
+public function inactive(Request $request)
+{
+    $user = User::find($request->user_id);
+    $user->status = 'inactive';
+    $user->save();
+
+    return back()->with('success','User set as inactive');
+}
