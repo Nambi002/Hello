@@ -1,0 +1,359 @@
+You want session-based restriction like this:
+
+If Admin is logged in → User login should not be allowed in another tab
+
+If User is logged in → Admin login should not be allowed in another tab
+
+Only one role session at a time
+
+This is a role session check in Laravel.
+
+Solution Concept
+
+When login happens:
+
+Save the role in session
+
+Before login, check session role
+
+If another role exists → block login
+
+Example:
+
+session('role') = admin
+or
+session('role') = user
+1----->️⃣ Admin Login Controller
+public function adminLogin(Request $request)
+{
+    // check if user already logged in
+    if(session('role') == 'user'){
+        return back()->with('error','User already logged in. Logout first.');
+    }
+
+    if(Auth::attempt(['email'=>$request->email,'password'=>$request->password,'role'=>'admin'])){
+        
+        session(['role'=>'admin']);
+
+        return redirect('/admin/dashboard');
+    }
+
+    return back()->with('error','Invalid credentials');
+}
+2----->️⃣ User Login Controller
+public function userLogin(Request $request)
+{
+    if(session('role') == 'admin'){
+        return back()->with('error','Admin already logged in. Logout first.');
+    }
+
+    if(Auth::attempt(['email'=>$request->email,'password'=>$request->password,'role'=>'user'])){
+        
+        session(['role'=>'user']);
+
+        return redirect('/dashboard');
+    }
+
+    return back()->with('error','Invalid credentials');
+}
+3----->️⃣ Logout (Important)
+public function logout()
+{
+    Auth::logout();
+
+    session()->forget('role');
+
+    return redirect('/login');
+}
+Flow
+Situation	Result
+Admin logged in	User login blocked
+User logged in	Admin login blocked
+Logout	Both allowed
+Example Message
+
+If admin logged:
+
+Admin already logged in. Please logout first.
+
+If user logged:
+
+User already logged in. Please logout first.
+Extra Professional Method (Better)
+
+You can also create middleware like
+
+CheckUserSession
+CheckAdminSession
+
+But for your beginner level task, the session check method is enough.
+
+If you want, I can also give complete clean Laravel structure for your project:
+
+LoginController
+
+AdminController
+
+UserController
+
+Middleware
+
+Routes
+
+Blade
+
+So your project will look like a real company project.
+
+results output image
+Image created
+•
+Login conflict error screens
+Share
+ok where want to apply logout function because i done in user and admin logout seperate
+
+Since you have separate Admin logout and User logout, you must apply the session role remove (session()->forget('role')) in both logout functions.
+
+Because the restriction works using session('role'), so when logout happens you must clear that session.
+
+1----->️⃣ Admin Logout Function
+
+In AdminController
+
+use Illuminate\Support\Facades\Auth;
+
+public function adminLogout()
+{
+    Auth::logout();  
+
+    session()->forget('role');   // remove role session
+
+    return redirect('/admin/login');
+}
+2----->️⃣ User Logout Function
+
+In UserController
+
+use Illuminate\Support\Facades\Auth;
+
+public function userLogout()
+{
+    Auth::logout();
+
+    session()->forget('role');   // remove role session
+
+    return redirect('/login');
+}
+3----->️⃣ Why This is Important
+
+Example:
+
+Admin login
+
+session('role') = admin
+
+Admin logout → session removed
+
+Now user can login.
+
+If you don't remove session, Laravel will still think:
+
+role = admin
+
+Then user login will be blocked.
+
+4-----> Final Flow
+Action	Session
+Admin login	role = admin
+Admin logout	role removed
+User login	role = user
+User logout	role removed
+5----->Small Tip (Professional way)
+
+Instead of repeating code, you can make one common logout
+
+public function logout()
+{
+    Auth::logout();
+    session()->forget('role');
+    return redirect('/');
+}
+
+But your separate logout also correct for beginner task.
+
+If you want, I can also show the exact Laravel interview task solution for:
+
+Admin login
+
+User login
+
+Prevent multiple role login
+
+Status change modal (verify/unverify/inactive)
+
+Edit profile
+
+Change password
+
+This looks exactly like company admin panel structure.
+
+ once I login the user and in multiple tabs, I login the user in one tab I logout the user. It will reflect to all the another at a sitting tabs.
+
+Yes, this is normal Laravel session behavior 
+
+When a user logs in, Laravel creates one session for the browser.
+All tabs share the same session.
+
+So the scenario works like this:
+
+Scenario
+
+1.----->User logs in → Tab 1
+
+session_id = ABC123
+user = logged in
+
+2.-----> Open Tab 2 / Tab 3
+
+All tabs use the same session
+
+session_id = ABC123
+user = logged in
+
+3.----->Logout from Tab 1
+
+Laravel runs:
+
+Auth::logout();
+session()->invalidate();
+session()->regenerateToken();
+
+Now the session becomes:
+
+session_id = deleted
+user = logged out
+
+4.-----> When Tab 2 or Tab 3 refreshes
+
+Laravel checks authentication:
+
+Auth::check() → false
+
+So it redirects to login page.
+
+Example Logout Code (Recommended)
+
+Use this in both Admin logout and User logout:
+
+public function logout(Request $request)
+{
+    Auth::logout();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/login');
+}
+Result
+Action	Result
+User login in one tab	Logged in all tabs
+User logout in one tab	All tabs logged out
+Admin logout	All admin tabs logged out
+
+This is correct and secure behavior used in real applications.
+
+ Small improvement (company-level):
+
+You can add middleware check:
+
+if(!Auth::check()){
+   return redirect('/login');
+}
+
+So when a logged-out tab tries to access dashboard → automatic redirect.
+
+If you want, I can also show a very important interview question solution:
+
+ How to prevent the same user from logging in on multiple browsers/devices (single-device login system).
+
+Many companies ask this in Laravel interviews.
+
+result output image
+Image created
+•
+Logged out across two tabs
+Share
+same for admin
+
+Yes Admin also behaves the same way because Laravel uses one session per browser.
+
+So the behavior for Admin multiple tabs will be exactly like User.
+
+Admin Multiple Tabs Scenario
+Step 1 — Admin Login (Tab 1)
+
+Admin logs in.
+
+session_id = XYZ123
+role = admin
+Step 2 — Open Tab 2 / Tab 3
+
+All tabs share the same session
+
+session_id = XYZ123
+role = admin
+
+So admin dashboard works in all tabs.
+
+Step 3 — Admin Logout (Any Tab)
+
+Logout code runs:
+
+public function adminLogout(Request $request)
+{
+    Auth::logout();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/admin/login');
+}
+
+Now session becomes:
+
+session destroyed
+role removed
+Step 4 — Other Tabs Refresh
+
+If Tab 2 or Tab 3 refresh:
+
+Auth::check() → false
+
+Laravel automatically redirects to:
+
+/admin/login
+Final Result
+Action	Result
+Admin login in one tab	Logged in all admin tabs
+Admin logout in one tab	Logged out in all admin tabs
+User logout	All user tabs logged out
+Simple Visual Flow
+Admin Login → Tab1 / Tab2 / Tab3 active
+
+Logout (Tab1)
+
+↓ session destroyed ↓
+
+Tab2 refresh → Admin Login Page
+Tab3 refresh → Admin Login Page
+
+This is correct and secure Laravel behavior used in real applications.
+
+Since you are building an Admin Panel + User Panel project, one more important feature companies expect is:
+
+Auto redirect when session expires
+
+Prevent user from opening admin routes
+
+Prevent admin from opening user routes
+
+If you want, I can show a very clean Laravel project structure for this task (controllers, middleware, routes, blade).
