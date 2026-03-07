@@ -1,0 +1,113 @@
+Example Table (Blade)
+<table class="table">
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+@foreach($users as $user)
+
+<tr>
+<td>{{ $user->id }}</td>
+<td>{{ $user->name }}</td>
+<td>{{ $user->status }}</td>
+
+<td>
+
+<button class="btn btn-success verifyBtn"
+data-id="{{ $user->id }}"
+data-name="{{ $user->name }}"
+data-bs-toggle="modal"
+data-bs-target="#verifyModal">
+
+Verify
+
+</button>
+
+</td>
+</tr>
+
+@endforeach
+</tbody>
+</table>
+Single Modal (Only One)
+<div class="modal fade" id="verifyModal">
+
+<div class="modal-dialog">
+<div class="modal-content">
+
+<div class="modal-header">
+<h5 class="modal-title">Verify User</h5>
+</div>
+
+<div class="modal-body">
+
+Are you sure you want to verify
+<b id="username"></b> ?
+
+</div>
+
+<div class="modal-footer">
+
+<form method="POST" action="{{ route('user.verify') }}">
+@csrf
+
+<input type="hidden" name="user_id" id="user_id">
+
+<button type="submit" class="btn btn-success">
+Yes
+</button>
+
+</form>
+
+<button class="btn btn-secondary" data-bs-dismiss="modal">
+No
+</button>
+
+</div>
+
+</div>
+</div>
+
+</div>
+JavaScript (Important)
+
+This sends the clicked user id to modal.
+
+<script>
+
+document.querySelectorAll(".verifyBtn").forEach(button => {
+
+button.addEventListener("click", function(){
+
+let userId = this.getAttribute("data-id");
+let userName = this.getAttribute("data-name");
+
+document.getElementById("user_id").value = userId;
+document.getElementById("username").innerText = userName;
+
+});
+
+});
+
+</script>
+Route
+Route::post('/verify-user', [AdminController::class,'verifyUser'])->name('user.verify');
+Controller
+public function verifyUser(Request $request)
+{
+
+$user = User::find($request->user_id);
+
+$user->status = 'verified';
+
+$user->save();
+
+return back()->with('success','User verified successfully');
+
+}
