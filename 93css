@@ -1,0 +1,73 @@
+Why This Happens
+
+Example CSS like this causes the issue:
+
+.sidebar .active {
+    border-left: 4px solid blue;
+    padding-left: 10px;
+}
+
+Other items:
+
+.sidebar a {
+    padding-left: 14px;
+}
+
+So when active → extra border + padding changes width, making the item move.
+
+Correct Fix (Best Solution)
+
+Keep the same spacing for all sidebar items, even when inactive.
+
+CSS Fix
+.sidebar a {
+    display: block;
+    padding: 10px 15px;
+    border-left: 4px solid transparent;
+}
+
+.sidebar a.active {
+    border-left: 4px solid #3b82f6;
+    background-color: #f3f6ff;
+}
+
+Now the border space always exists, so items won't shift.
+
+Example Sidebar HTML
+<div class="sidebar">
+
+<a href="/unverified" class="active">
+☐ Unverified Users
+</a>
+
+<a href="/verified">
+☐ Verified Users
+</a>
+
+<a href="/inactive">
+☐ Deleted / Inactive Users
+</a>
+
+</div>
+Alternative Fix (Bootstrap Style)
+
+If using Bootstrap:
+
+.nav-link {
+    padding-left: 20px;
+}
+
+.nav-link.active {
+    border-left: 4px solid blue;
+}
+
+Add placeholder border:
+
+.nav-link {
+    border-left: 4px solid transparent;
+}
+Visual Result After Fix
+Menu	Alignment
+Unverified Users	aligned
+Verified Users	aligned
+Inactive Users	aligned
