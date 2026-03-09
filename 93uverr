@@ -1,0 +1,408 @@
+dashboard.php 
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+    <style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family:'Poppins', sans-serif;
+    }
+    .title{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        background:#4c4ea3;
+        padding:30px;
+        color:#fff;
+        height:10vh;
+       
+    }
+    .title a{
+        color:#fff;
+        text-decoration:none;
+    }
+    .content{
+        display:flex;
+    }
+    .main{
+        width:200px;
+        background:#4c4ea3;
+        padding:10px;
+        height:90vh;
+
+    }
+    head{
+        margin-left:60px;
+    }
+    .main a{
+        color:#fff;
+        margin-top:50px;
+    }
+    .main-content{
+        flex:1;
+        padding:30px;
+        font-size:28px;
+        font-weight:600;
+    }
+    .left{
+        margin-top:50px;
+    }
+    .left ul{
+        list-style:none;
+    }
+    .left ul li{
+        margin:25px 0;
+        margin-bottom:80px;
+    }
+    .left ul li a{
+        color:#fff;
+        text-decoration:none;
+        font-size:17px;
+        margin-left:20px;
+    }
+</style>
+</head>
+<body>
+
+<div class="title">
+    <div class="head"><b>ADMIN PANEL</b></div>
+    <div><a href="/admin/logout">Logout</a></div>
+</div>
+
+<div class="content">
+
+    <div class="main">
+        <div class="left">
+        <ul>
+            
+        <li><a href="/admin/unverified-users">Unverified Users</a></li>
+        <li><a href="/admin/verified-users">Verified Users</a></li>
+        <li><a href="/admin/inactive-users">Inactive Users</a></li>
+        </ul>
+    </div>
+    </div>
+
+    <div  class="main-content">
+       
+       @yield('content')
+       
+
+    </div>
+     
+</div>
+
+</body>
+</html>
+
+
+inactive.blade
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inactive_user</title>
+</head>
+<style>
+    h2{
+        font-size:30px;
+        font-weight:600;
+        margin-top:60px;
+        margin-bottom:60px;
+    }
+  table, td, th {
+  border: 1px solid black;
+    padding:8px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align:center;
+  font-size:16px;
+  font-weight:normal;
+}
+td a{
+    text-decoration:none;
+    color:white;
+}
+.button{
+    display:inline;
+    background:#24a0ed;
+    border-radius:6px;
+    padding:7px;
+}
+</style>
+<body>
+@extends('admin.dashboard')
+@section('content')
+<form action="/admin/inactive-users" method="POST">
+        @csrf
+<h2>Inactive Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+  
+    <th>ID</th>
+    <th>Image</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+    
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->id }}</td>
+    <td><img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30"></td>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+</tr>
+@endforeach
+
+</table>
+@endsection
+</form>
+</body>
+</html>
+
+
+
+
+unverified.blade
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unverified_users</title>
+     
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
+
+</head>
+<style>
+    h2{
+        font-size:30px;
+        font-weight:600;
+        margin-top:60px;
+        margin-bottom:60px;
+    }
+  table, td, th {
+  border: 1px solid black;
+    padding:8px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align:center;
+   font-size:16px;
+    font-weight:normal;
+}
+td a{
+    text-decoration:none;
+    color:white;
+}
+.button{
+    display:inline;
+    background:#24a0ed;
+    border-radius:6px;
+    padding:7px;
+}
+</style>
+<body>
+    @extends('admin.dashboard')
+
+@section('content')
+
+<form action="/admin/unverified-users" method="POST">
+    @csrf
+<h2>Unverified Users</h2>
+
+
+<table border="1" cellpadding="10">
+<tr>
+  
+    <th>ID</th>
+    <th>Image</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Phone</th>
+    <th>Action</th>
+</tr>
+@foreach($users as $user)
+<tr>
+   <td>{{ $user->id }}</td>
+   <td><img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30"></td>
+
+
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <!-- Button trigger modal -->
+        <div class="button">
+            <a href="#" data-bs-toggle="modal" data-bs-target="#verifyModal{{ $user->id }}">Verify</a>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="verifyModal{{ $user->id }}" tabindex="-1" aria-labelledby="verifyModalLabel{{ $user->id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="verifyModalLabel{{ $user->id }}">Verify User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                Do you want to verify {{ $user->name }}?
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <a href="/admin/verify/{{ $user->id }}" class="btn btn-success">Yes, Verify</a>
+              </div>
+            </div>
+          </div>
+        </div>
+    </td>
+</tr>
+@endforeach
+       <!-- <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+  Verify
+</button>-->
+
+
+<!-- Modal -->
+
+
+@endsection
+</form>
+    
+</body>
+</html>
+
+
+
+
+
+
+verified.blade
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>verified_users</title>
+    
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
+</head>
+<style>
+    h2{
+        font-size:30px;
+        font-weight:600;
+        margin-top:60px;
+        margin-bottom:60px;
+    }
+  table, td, th {
+  border: 1px solid black;
+    padding:8px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align:center;
+   font-size:16px;
+    font-weight:normal;
+}
+td a{
+    text-decoration:none;
+    color:white;
+}
+.button{
+    display:inline;
+    background:#24a0ed;
+    border-radius:6px;
+    padding:7px;
+}
+</style>
+<body>
+    @extends('admin.dashboard')
+
+@section('content')
+<form action="/admin/verified-users" method="POST">
+    @csrf
+<h2>Verified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    
+    <th>ID</th>
+    <th>Image</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Mobile</th>
+    <th>Action</th>
+</tr>
+
+
+@foreach($users as $user)
+<tr>
+   <td>{{ $user->id }}</td>
+   <!-- <td><img src="{{  asset('images/default.png') }}" width="30"></td>-->
+
+    <td><img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30"></td>
+   
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>{{ $user->mobile }}</td>
+    <td>
+        <!-- Button trigger modal -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inactiveModal{{ $user->id }}">
+          Inactive
+        </button>
+
+        <!-- Modal -->
+        <div class="modal fade" id="inactiveModal{{ $user->id }}" tabindex="-1" aria-labelledby="inactiveModalLabel{{ $user->id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="inactiveModalLabel{{ $user->id }}">Inactive User Confirmation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                Do you want to mark {{ $user->name }} as inactive?
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <a href="/admin/inactive/{{ $user->id }}" class="btn btn-danger">Yes, Inactive</a>
+              </div>
+            </div>
+          </div>
+        </div>
+    </td>
+</tr>
+@endforeach
+</table>
+@endsection
+</form>
+</body>
+</html>
+
+
+
+----here when i click unverified/verified all element in sidenavbar move to right from its original position..where when i clicks incactive it says in defaults position. so fix unverified/verified problem while clicking.
