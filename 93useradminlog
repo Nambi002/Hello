@@ -1,0 +1,151 @@
+Problem happening now
+
+Flow in your system:
+
+Unverified user tries to login
+
+Your system checks → status != verified
+
+You show error "please verify account"
+
+But before the status check, you already created the session for the user.
+
+So the system thinks:
+
+User already logged in
+
+Then when you open Admin Login, your middleware says:
+
+User already logged in
+
+So admin cannot login.
+
+Correct Login Flow (Important)
+
+You must check status BEFORE creating session.
+
+Correct order
+1. Check email & password
+2. Check status
+3. If verified → create session
+4. If unverified → show error (NO SESSION)
+
+
+Correct User Login Controller Example
+
+
+public function login(Request $request)
+{
+    $credentials = $request->only('email','password');
+
+    if(Auth::attempt($credentials))
+    {
+        $user = Auth::user();
+
+        // check verification
+        if($user->status != 1)
+        {
+            Auth::logout(); // VERY IMPORTANT
+            return back()->with('error','Admin must verify your account');
+        }
+
+        return redirect()->route('user.dashboard');
+    }
+
+    return back()->with('error','Invalid Credentials');
+}
+Important line
+Auth::logout();
+
+This removes the session immediately for unverified users.
+
+
+
+Admin Login Should Be Separate
+
+
+
+Example:
+
+if(Auth::attempt($credentials))
+{
+    if(Auth::user()->role != 'admin')
+    {
+        Auth::logout();
+        return back()->with('error','Admin login only');
+    }
+
+    return redirect()->route('admin.dashboard');
+}
+
+
+
+
+
+Middleware Logic
+
+User middleware:
+
+if(!Auth::check() || Auth::user()->role != 'user'){
+return redirect('/login');
+}
+
+Admin middleware:
+
+if(!Auth::check() || Auth::user()->role != 'admin'){
+return redirect('/admin/login');
+}
+
+
+
+
+
+
+Final Correct Flow
+User
+Register
+↓
+status = 0 (Unverified)
+↓
+Admin verifies
+↓
+status = 1
+↓
+User can login
+If Unverified User tries to login
+Check credentials
+↓
+status = 0
+↓
+Auth::logout()
+↓
+Show error
+
+Session NOT created.
+
+So admin login works normally.
+
+Your Bug Fix (One Line)
+
+Add this:
+
+Auth::logout();
+
+inside unverified condition.
+
+Expected Result
+Scenario	Result
+Unverified user login	Error message
+Admin login	Works
+Verified user login	Works
+Admin + User different tabs	Works
+
+If you want, I can also show a clean professional structure for your assignment:
+
+UserAuthController
+AdminAuthController
+UserMiddleware
+AdminMiddleware
+Status middleware
+
+This structure is exactly how companies expect Laravel tasks to be written.
