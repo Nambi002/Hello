@@ -1,0 +1,157 @@
+Create New Migration (Add Image Column)
+
+Run:
+
+php artisan make:migration add_image_to_users_table --table=users
+
+Open the created migration file.
+
+Example:
+
+database/migrations/xxxx_add_image_to_users_table.php
+
+Edit it like this:
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('image')->nullable()->after('mobile');
+        });
+    }
+
+    public function down()
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('image');
+        });
+    }
+};
+
+
+2. Run Migration
+
+
+php artisan migrate
+
+Now users table becomes
+
+| id | name | email | mobile | image | password | status |
+
+
+
+3.Create Upload Folder
+
+
+
+Inside public folder
+
+public/uploads
+
+Also create default image folder
+
+public/images
+
+Add default image
+
+public/images/default.png
+
+
+4. Edit Profile Form
+
+
+In your Edit Profile Blade
+
+Add:
+
+<form method="POST" action="{{ route('user.profile.update') }}" enctype="multipart/form-data">
+@csrf
+
+<input type="text" name="name" value="{{ $user->name }}">
+
+<input type="text" name="mobile" value="{{ $user->mobile }}">
+
+<input type="file" name="image">
+
+<button type="submit">Update</button>
+
+</form>
+
+Important:
+
+enctype="multipart/form-data"
+
+
+5. Update ProfileController
+
+
+Modify your update function.
+
+public function update(Request $request)
+{
+
+$request->validate([
+'name'=>'required',
+'mobile'=>'required',
+'image'=>'nullable|image|mimes:jpg,png,jpeg|max:2048'
+]);
+
+$user = auth()->user();
+
+if($request->hasFile('image'))
+{
+
+$imageName = time().'.'.$request->image->extension();
+
+$request->image->move(public_path('uploads'),$imageName);
+
+$user->image = $imageName;
+
+}
+
+$user->name = $request->name;
+$user->mobile = $request->mobile;
+
+$user->save();
+
+return back()->with('success','Profile Updated');
+
+}
+
+6. Show Profile Image
+
+In dashboard / profile page
+
+<img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="80">
+
+Logic:
+
+if user uploaded image
+show uploaded image
+
+else
+show default image
+7️⃣ Final Output
+If user uploads image
+uploads/1719999.jpg
+If no image uploaded
+images/default.png
+8️⃣ Optional (Better UI)
+
+Show preview before upload
+
+<input type="file" name="image" onchange="previewImage(event)">
+
+<img id="preview" width="100">
+
+<script>
+function previewImage(event)
+{
+document.getElementById('preview').src = URL.createObjectURL(event.target.files[0]);
+}
+</script>
