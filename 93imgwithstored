@@ -1,0 +1,369 @@
+
+
+We will add:
+
+1️.Delete old image when updating new profile image
+2️. Use Laravel Storage instead of public uploads
+
+I’ll show step-by-step.
+
+1️. Create Storage Link (Laravel Standard Method)
+
+Run this command once:
+
+php artisan storage:link
+
+This creates:
+
+public/storage → storage/app/public
+
+Now images will be stored inside:
+
+storage/app/public/profile_images
+
+
+2️. Modify Controller (Update Profile)
+
+
+Open your ProfileController.
+
+Add this at the top:
+
+use Illuminate\Support\Facades\Storage;
+
+Now update function:
+
+public function update(Request $request)
+{
+
+$request->validate([
+'name'=>'required',
+'mobile'=>'required',
+'image'=>'nullable|image|mimes:jpg,jpeg,png|max:2048'
+]);
+
+$user = auth()->user();
+
+if($request->hasFile('image'))
+{
+
+// Delete old image
+if($user->image && Storage::exists('public/profile_images/'.$user->image)){
+Storage::delete('public/profile_images/'.$user->image);
+}
+
+// Upload new image
+$imageName = time().'.'.$request->image->extension();
+
+$request->image->storeAs('public/profile_images',$imageName);
+
+$user->image = $imageName;
+
+}
+
+$user->name = $request->name;
+$user->mobile = $request->mobile;
+
+$user->save();
+
+return back()->with('success','Profile Updated Successfully');
+
+}
+
+
+3️. Folder Structure
+
+
+After upload:
+
+storage
+ └── app
+     └── public
+         └── profile_images
+               1719999.jpg
+
+Laravel automatically links it to:
+
+public/storage/profile_images
+
+
+4️. Show Profile Image
+
+In Blade
+
+<img src="{{ $user->image ? asset('storage/profile_images/'.$user->image) : asset('images/default.png') }}" width="80">
+
+
+5️. Default Image
+
+Place default image here:
+
+public/images/default.png
+
+
+6️. Final Flow
+
+User registers
+↓
+Admin verifies
+↓
+User login
+↓
+User Edit Profile
+↓
+Upload profile image
+
+If user uploads new image:
+
+Old image → deleted
+New image → stored
+
+
+7️. Result
+Name	Mobile	Image
+Nambi	9876543210	profile image
+
+
+Most Laravel developers forget this validation:
+
+'image'=>'nullable|image|mimes:jpg,jpeg,png|max:2048'
+
+It protects against:
+
+✔ fake files
+✔ large files
+✔ security issues
+
+ If you want, I can also show one more powerful feature that makes your task look like a real production admin panel:
+
+✔ Profile image preview before upload (like LinkedIn / Instagram)
+✔ Only 10 lines of JS.
+
+It makes the UI look 5× better in demo.
+
+Now provide me full code
+
+
+Migration
+
+Route
+
+Controller
+
+Blade Form
+
+Image Display
+
+Storage setup
+
+Delete old image
+
+1️. Migration (Add Image Column)
+
+Run:
+
+php artisan make:migration add_image_to_users_table --table=users
+
+Edit migration:
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('image')->nullable()->after('mobile');
+        });
+    }
+
+    public function down()
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('image');
+        });
+    }
+};
+
+Run:
+
+php artisan migrate
+
+2️. Storage Link
+
+Run:
+
+php artisan storage:link
+
+Folder created:
+
+public/storage → storage/app/public
+
+
+3️. Route (web.php)
+
+Example structure dividing User and Admin routes.
+
+use App\Http\Controllers\user\ProfileController;
+
+Route::middleware(['userauth'])->group(function(){
+
+Route::get('/user/edit-profile',[ProfileController::class,'edit'])->name('user.edit.profile');
+
+Route::post('/user/update-profile',[ProfileController::class,'update'])->name('user.update.profile');
+
+});
+
+4️.ProfileController
+
+app/Http/Controllers/user/ProfileController.php
+
+<?php
+
+namespace App\Http\Controllers\user;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+
+class ProfileController extends Controller
+{
+
+public function edit()
+{
+    $user = Auth::user();
+
+    return view('user.edit_profile',compact('user'));
+}
+
+public function update(Request $request)
+{
+
+$request->validate([
+'name'=>'required',
+'mobile'=>'required',
+'image'=>'nullable|image|mimes:jpg,jpeg,png|max:2048'
+]);
+
+$user = Auth::user();
+
+if($request->hasFile('image'))
+{
+
+// delete old image
+if($user->image && Storage::exists('public/profile_images/'.$user->image)){
+Storage::delete('public/profile_images/'.$user->image);
+}
+
+// upload new image
+$imageName = time().'.'.$request->image->extension();
+
+$request->image->storeAs('public/profile_images',$imageName);
+
+$user->image = $imageName;
+
+}
+
+$user->name = $request->name;
+$user->mobile = $request->mobile;
+
+$user->save();
+
+return back()->with('success','Profile Updated Successfully');
+
+}
+
+}
+
+5️. Edit Profile Blade
+
+resources/views/user/edit_profile.blade.php
+
+@extends('layouts.user')
+
+@section('content')
+
+<h3>Edit Profile</h3>
+
+@if(session('success'))
+<p style="color:green">{{ session('success') }}</p>
+@endif
+
+<form action="{{ route('user.update.profile') }}" method="POST" enctype="multipart/form-data">
+
+@csrf
+
+<label>Name</label><br>
+<input type="text" name="name" value="{{ $user->name }}"><br><br>
+
+<label>Mobile</label><br>
+<input type="text" name="mobile" value="{{ $user->mobile }}"><br><br>
+
+<label>Profile Image</label><br>
+<input type="file" name="image"><br><br>
+
+@if($user->image)
+<img src="{{ asset('storage/profile_images/'.$user->image) }}" width="100">
+@else
+<img src="{{ asset('images/default.png') }}" width="100">
+@endif
+
+<br><br>
+
+<button type="submit">Update Profile</button>
+
+</form>
+
+@endsection
+
+6️. Default Image
+
+Create folder:
+
+public/images
+
+Add:
+
+public/images/default.png
+
+
+7️. Folder Structure
+project
+ ├── app
+ ├── database
+ ├── resources
+ │    └── views
+ │         └── user
+ │              └── edit_profile.blade.php
+ ├── storage
+ │    └── app
+ │         └── public
+ │              └── profile_images
+ ├── public
+ │    ├── storage
+ │    └── images
+ │         └── default.png
+
+
+8️. Result
+
+User Edit Profile Page allows:
+
+✔ Update Name
+✔ Update Mobile
+✔ Upload Profile Image
+
+User cannot update
+
+Email
+Password
+
+Password handled in Change Password Page.
+
+9️. Image Display Anywhere (Header / Dashboard)
+<img src="{{ auth()->user()->image ? asset('storage/profile_images/'.auth()->user()->image) : asset('images/default.png') }}" width="40">
+
+ Now your Laravel assignment fully satisfies the requirement:
