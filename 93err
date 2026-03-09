@@ -1,0 +1,242 @@
+change password error :
+
+
+routes:
+Route::middleware(['user.auth'])->group(function () {
+
+Route::get('home', [ProfileController::class, 'home']);     
+Route::get('header', [ProfileController::class, 'header']);                                                   //7pm93
+Route::get('edit-profile/{id}', [ProfileController::class, 'edit'])->middleware('user.auth');         
+Route::put('update-profile/{id}', [ProfileController::class, 'update'])->middleware('user.auth');   
+
+Route::get('/passwords/{id}', [ProfileController::class, 'showChangePassword']); 
+Route::post('/updatepasswords/{id}', [ProfileController::class, 'changePassword']);
+  });
+
+
+
+header.blade.php
+
+
+<div class="dropdown" style="float:right;">
+  <button class="dropbtn"> 
+   <!--$user->image ? asset('uploads/'.$user->image) :-->
+          
+
+    <img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30">
+        Account  <i class="fa-solid fa-angle-down"></i></button>
+          
+  <div class="dropdown-content">
+  <a href="{{ url('/edit-profile/{id}') }}">Edit Profile</a>
+
+  <a href="{{ url('passwords/{id}') }}">Change Password</a>
+  <a href="{{ url('/logout') }}">Logout</a>
+  </div>
+</div>
+
+
+changepassword.blade
+
+<body>
+    
+@extends('home')
+
+@section('content')
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+          
+
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    <div class="card">
+                <div class="card-header">
+                    <h4> Update Your Password
+                        <a href="{{ url('home') }}" class="btn btn-danger float-end">BACK</a>
+                    </h4>
+                </div>
+<div class="card-body">
+    <form action="{{ url('updatepasswords/{id}') }}" method="POST" onsubmit="return validatePassword()">
+        @csrf
+
+        <div class="form-group mb-3" id="password-box">
+            <label>Current Password</label>
+            <input type="password" name="current_password" id="oldpassword" class="form-control" required>
+             <i class="fa-solid fa-eye" onclick="togglePassword()"></i>
+            
+        </div>
+
+        <div class="form-group mb-3" id="password-box">
+            <label>New Password</label>
+            <input type="password" name="new_password" id="password" class="form-control" required>
+        <i class="fa-solid fa-eye" onclick="togglePassword1()"></i>
+</div>
+   <p id="passwordError" ></p>
+
+        <div class="form-group mb-3" id="password-box">
+            <label>Confirm Password</label>
+            <input type="password" name="new_password_confirmation" id="confirmPassword" class="form-control" required>
+           <i class="fa-solid fa-eye" onclick="togglePassword2()"></i>
+</div>
+
+    <p id="confirmError" style="color:red;"></p>
+
+
+ <div class="form-group mb-3">
+        <button type="submit" class="btn btn-primary">Update Password</button>
+        </div>
+    </form>
+</body>
+
+
+
+
+profilecontroller 
+
+ public function showChangePassword()
+    {
+        return view('changepassword');
+    }
+
+    public function changePassword(Request $request)
+    {
+ 
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $user = User::find(Session::get('user_id'));
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->with('error', 'Current password is incorrect.');
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return back()->with('success', 'Password changed successfully.');
+    }
+
+
+
+error i faced 
+
+Internal Server Error
+
+Copy as Markdown
+ErrorException
+resources\views\header.blade.php:146
+Undefined variable $user
+
+LARAVEL
+12.52.0
+PHP
+8.2.12
+UNHANDLED
+CODE 0
+500
+GET
+http://127.0.0.1:8000/passwords/%7Bid%7D
+
+Exception trace
+Illuminate\Foundation\Bootstrap\HandleExceptions->Illuminate\Foundation\Bootstrap\{closure}(integer, string, string, integer)
+resources\views\header.blade.php:146
+
+141<div class="dropdown" style="float:right;">
+142  <button class="dropbtn"> 
+143   <!--$user->image ? asset('uploads/'.$user->image) :-->
+144          
+145
+146    <img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30">
+147        Account  <i class="fa-solid fa-angle-down"></i></button>
+148          
+149  <div class="dropdown-content">
+150  <a href="{{ url('/edit-profile/{id}') }}">Edit Profile</a>
+151
+152  <a href="{{ url('passwords/{id}') }}">Change Password</a>
+153  <a href="{{ url('/logout') }}">Logout</a>
+154  </div>
+155</div>
+156
+157</body>
+158
+7 vendor frames
+
+Illuminate\View\View->render()
+resources\views\home.blade.php:40
+
+7 vendor frames
+
+Illuminate\View\View->render()
+resources\views\changepassword.blade.php:177
+
+13 vendor frames
+
+Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(object(Illuminate\Http\Request))
+app\Http\Middleware\UserMiddleware.php:21
+
+43 vendor frames
+
+Illuminate\Foundation\Application->handleRequest(object(Illuminate\Http\Request))
+public\index.php:20
+
+1 vendor frame
+
+Queries
+1-1 of 1
+mysql
+select * from `users` where `id` = 42 and `users`.`deleted_at` is null limit 1
+12.65ms
+Headers
+host
+127.0.0.1:8000
+connection
+keep-alive
+sec-ch-ua
+"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+upgrade-insecure-requests
+1
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+sec-fetch-site
+same-origin
+sec-fetch-mode
+navigate
+sec-fetch-user
+?1
+sec-fetch-dest
+document
+referer
+http://127.0.0.1:8000/home
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8
+cookie
+XSRF-TOKEN=eyJpdiI6InNSOGpweUUrMmhMVXhPZ25WeUJrMlE9PSIsInZhbHVlIjoiWGQxM21IWXlVbEhvd25Ob0pzTjYrcEJNRDMrYTRJdkRjRUQxd3B2L09Gc0J6QXlMYk10WWZMR3ovS0dUWG9SNXB5SWZMd1d3dGt2K21XYlRwZjg2djNncExKRWhKcFE1QzZwZ2FnbEZuWlBRdW5GTDdWZ205OG1lMDEvMEpwL3AiLCJtYWMiOiJkYzVhMTYxNTJmMWQ4OTZjNjllMjEyOGU5NDEyNjhkNGUxZDI1MTU3NzhjYTJmNTJlODc5Mjg2ZThhZDdjMjQ1IiwidGFnIjoiIn0%3D; laravel-session=eyJpdiI6InR3RVBQUE9qZ1VzQ2g1REtNTUNuMWc9PSIsInZhbHVlIjoiMktSTnNIRHNZOTJOYlpNeU5xRExqL2dDZExySy9xNlFtY2pBZEQyUlZRRGRsMHNXRFVCcFFENHNpM1lrNEtZRXNySVkzajMxYmd2QXA4Q3RQNHA2RjB0TWtjdG1sczk3bTc5ODNuQWhQZGVLQnllMXQ1TStRbGhZb0hvWkdNa2EiLCJtYWMiOiJhNTVjNTc4M2Q1NmYwM2UxZjIwMTUzNTM5ZGRhNTgwN2YyMzEyZGNmZDc3NzE3M2RmZGJlZTllYjIwNzVhYTVmIiwidGFnIjoiIn0%3D
+Body
+// No request body
+Routing
+controller
+App\Http\Controllers\user\ProfileController@showChangePassword
+route name
+pwd
+middleware
+web, user.auth
+Routing parameters
+{
+    "id": "{id}"
+}
