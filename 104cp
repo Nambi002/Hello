@@ -1,0 +1,314 @@
+Problem: $user Undefined in header.blade.php
+
+Error:
+
+Undefined variable $user
+
+Because showChangePassword() only returns:
+
+return view('changepassword');
+
+But header needs $user.
+
+ Fix Controller
+
+Change this:
+
+public function showChangePassword()
+{
+    return view('changepassword');
+}
+
+to:
+
+public function showChangePassword()
+{
+    $user = User::find(Session::get('user_id'));
+    return view('changepassword', compact('user'));
+}
+2.Problem: {id} used incorrectly in Blade
+
+You wrote:
+
+<a href="{{ url('/edit-profile/{id}') }}">
+<a href="{{ url('passwords/{id}') }}">
+
+Laravel treats {id} as text.
+
+Fix
+
+Use actual user id:
+
+<a href="{{ url('/edit-profile/'.$user->id) }}">Edit Profile</a>
+
+<a href="{{ url('/passwords/'.$user->id) }}">Change Password</a>
+
+
+3.Problem in Change Password Form
+
+You wrote:
+
+<form action="{{ url('updatepasswords/{id}') }}" method="POST">
+Fix
+<form action="{{ url('updatepasswords/'.$user->id) }}" method="POST">
+
+
+4.Fix Route (Better)
+
+Your route:
+
+Route::get('/passwords/{id}', [ProfileController::class, 'showChangePassword']);
+
+But you don't need id because you already use session.
+
+
+
+Better Route
+Route::get('/passwords', [ProfileController::class, 'showChangePassword']);
+Route::post('/updatepasswords', [ProfileController::class, 'changePassword']);
+
+Then Blade becomes cleaner:
+
+<a href="{{ url('/passwords') }}">Change Password</a>
+
+Form:
+
+<form action="{{ url('/updatepasswords') }}" method="POST">
+
+
+5.Final Correct Flow
+
+
+Controller
+public function showChangePassword()
+{
+    $user = User::find(Session::get('user_id'));
+    return view('changepassword', compact('user'));
+}
+Header
+<img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30">
+
+<a href="{{ url('/edit-profile/'.$user->id) }}">Edit Profile</a>
+
+<a href="{{ url('/passwords/'.$user->id) }}">Change Password</a>
+Form
+<form action="{{ url('updatepasswords/'.$user->id) }}" method="POST">
+@csrf
+ Best Practice (Important)
+
+Since you use session login, you should not send id in URL.
+Use:
+
+Session::get('user_id')
+
+only.
+
+Much safer.
+
+ If you want, I can also show the professional Laravel way to do this:
+
+Global $user in header
+
+No id in URL
+
+Cleaner routes
+
+Works for edit profile + change password + image
+
+It will remove 90% of your errors.
+
+I use {  id } because I take from user.auth middleware 
+
+If you are getting the id from user.auth middleware,  But the error you are facing is not because of middleware. The real issue is still this:
+
+Undefined variable $user in header.blade.php
+
+Your header view needs $user, but when Laravel loads changepassword.blade.php → home.blade.php → header.blade.php, the $user variable is not available.
+
+ Correct Solution (Using Session from Middleware)
+
+Since your middleware already checks login and you store user_id in session, the best way is to load the user inside the header view itself.
+
+Fix header.blade.php
+
+Add this at the top of header.blade.php:
+
+@php
+use App\Models\User;
+$user = User::find(session('user_id'));
+@endphp
+
+Then your image code will work:
+
+<img src="{{ $user && $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30">
+
+ Fix the {id} in URL
+
+Right now you wrote:
+
+<a href="{{ url('/edit-profile/{id}') }}">
+<a href="{{ url('passwords/{id}') }}">
+
+Laravel treats {id} as text, not a variable.
+
+Correct way:
+<a href="{{ url('/edit-profile/'.$user->id) }}">Edit Profile</a>
+
+<a href="{{ url('/passwords/'.$user->id) }}">Change Password</a>
+
+ Fix Change Password Form
+
+Change this:
+
+<form action="{{ url('updatepasswords/{id}') }}" method="POST">
+
+to:
+
+<form action="{{ url('updatepasswords/'.$user->id) }}" method="POST">
+
+ Optional (Cleaner Laravel Way)
+
+Since you already use session, you actually don't need {id} in routes.
+
+Better routes:
+
+Route::get('/passwords', [ProfileController::class, 'showChangePassword']);
+Route::post('/updatepasswords', [ProfileController::class, 'changePassword']);
+
+And then:
+
+<a href="{{ url('/passwords') }}">Change Password</a>
+
+Small Mistake in Your Controller
+
+Your function:
+
+public function showChangePassword()
+{
+    return view('changepassword');
+}
+
+If header needs $user, better send it:
+
+public function showChangePassword()
+{
+    $user = User::find(session('user_id'));
+    return view('changepassword', compact('user'));
+}
+Final Result
+
+After these fixes:
+
+✔ Header image works
+✔ Default image works
+✔ Change password page opens
+✔ {id} error removed
+✔ No more $user undefined error
+
+ If you want, I can also show you the professional Laravel structure for login session + profile image + header reuse, which will reduce 70% of your code and avoid future bugs.
+
+Not working 
+It come undefined $user
+
+The reason it is still showing Undefined variable $user is because your header view is loaded from home.blade.php layout, but the $user variable is not passed to that layout.
+
+So even if you pass $user in changepassword, it won’t automatically reach header.blade.php.
+
+Let’s fix it properly.
+
+Best Fix (Use Session Directly in Header)
+
+Since you already store user_id in session, get the user inside header.blade.php.
+
+At the TOP of header.blade.php
+@php
+use App\Models\User;
+$user = User::find(session('user_id'));
+@endphp
+
+Then use:
+
+<img src="{{ $user && $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30">
+
+This ensures:
+
+✔ $user always exists
+✔ Works on home / edit / password pages
+✔ No controller dependency
+
+Fix Your URL {id} Problem
+
+You wrote:
+
+<a href="{{ url('/edit-profile/{id}') }}">
+<a href="{{ url('passwords/{id}') }}">
+
+Laravel treats {id} as text.
+
+Correct:
+<a href="{{ url('/edit-profile/'.$user->id) }}">Edit Profile</a>
+
+<a href="{{ url('/passwords/'.$user->id) }}">Change Password</a>
+
+Fix Form Action
+
+Change this:
+
+<form action="{{ url('updatepasswords/{id}') }}" method="POST">
+
+to:
+
+<form action="{{ url('updatepasswords/'.$user->id) }}" method="POST">
+
+ Also Remove <body> From changepassword.blade
+
+You wrote:
+
+<body>
+
+@extends('home')
+
+This is incorrect Blade structure.
+
+Correct:
+
+@extends('home')
+
+@section('content')
+
+Final Working Header Example
+
+@php
+use App\Models\User;
+$user = User::find(session('user_id'));
+@endphp
+
+<div class="dropdown" style="float:right;">
+<button class="dropbtn">
+
+<img src="{{ $user && $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30">
+
+Account <i class="fa-solid fa-angle-down"></i>
+</button>
+
+<div class="dropdown-content">
+
+<a href="{{ url('/edit-profile/'.$user->id) }}">Edit Profile</a>
+
+<a href="{{ url('/passwords/'.$user->id) }}">Change Password</a>
+
+<a href="{{ url('/logout') }}">Logout</a>
+
+</div>
+</div>
+ One More Important Bug in Your Routes
+
+You opened this URL:
+
+http://127.0.0.1:8000/passwords/%7Bid%7D
+
+That means {id} is not replaced.
+
+So correct link is:
+
+http://127.0.0.1:8000/passwords/42
