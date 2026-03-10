@@ -1,0 +1,95 @@
+Your issue happens because you are setting the session before checking verification.
+So when an unverified user tries to login, this line already runs:
+
+Session::put('user_id',$user->id);
+session(['role'=>'user']);
+
+Because of this, the system thinks a user is already logged in, so when you try to login as admin, it blocks it.
+
+Correct Logic (Fix)
+
+You must check verification first, then create session and login.
+
+Correct checkLogin() code
+public function checkLogin(Request $request)
+{
+    // prevent admin already logged
+    if(session('role') == 'admin'){
+        return back()->with('error','Admin already logged in. Logout first.');
+    }
+
+    $user = User::where('email',$request->email)->first();
+
+    if(!$user || !Hash::check($request->password,$user->password)){
+        return back()->with('error','Invalid credentials');
+    }
+
+    // CHECK VERIFIED FIRST
+    if ($user->status != 'verified') {
+        return back()->with('error', 'Wait for admin verification');
+    }
+
+    // THEN LOGIN
+    Auth::login($user);
+
+    Session::put('user_id',$user->id);
+    session(['role'=>'user']);
+
+    return redirect('/home');
+}
+ Why this Fix Works
+
+Before fix:
+
+Unverified user login
+↓
+Session created
+↓
+System thinks user logged in
+↓
+Admin login blocked
+
+After fix:
+
+Unverified user login
+↓
+Verification check fails
+↓
+NO SESSION CREATED
+↓
+Admin can login normally
+Also Small Issue in Middleware
+
+You used Auth but didn't import it.
+
+Add this at top of CheckVerified.php
+
+use Illuminate\Support\Facades\Auth;
+ Best Status Practice (Important)
+
+Instead of string 'verified', better use numbers:
+
+0 = unverified
+1 = verified
+2 = inactive
+
+Then check like:
+
+if ($user->status != 1) {
+    return back()->with('error','Wait for admin verification');
+}
+
+More professional and faster.
+
+Bonus (Professional Login Flow)
+Login Attempt
+   ↓
+Check Email Exists
+   ↓
+Check Password
+   ↓
+Check Status
+   ↓
+Create Session
+   ↓
+Redirect Dashboard
