@@ -1,0 +1,1979 @@
+
+
+1️. Install Laravel Project
+
+
+Open terminal:
+
+composer create-project laravel/laravel blog-project
+Go inside project
+
+cd blog-project
+Run server
+
+php artisan serve
+Open
+
+http://127.0.0.1:8000
+
+
+
+2️.Install Required Libraries
+
+
+Bootstrap + jQuery + FontAwesome
+Edit:
+
+resources/views/layouts/app.blade.php
+<!DOCTYPE html>
+<html>
+<head>
+<title>Laravel Blog</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
+
+</head>
+
+<body>
+
+<div class="container mt-4">
+
+@yield('content')
+
+</div>
+
+</body>
+</html>
+
+What is this?
+
+
+3️. Database Configuration
+
+Edit
+
+.env
+Example:
+
+DB_DATABASE=laravel_blog
+DB_USERNAME=root
+DB_PASSWORD=
+Create database in MySQL:
+
+laravel_blog
+
+
+4️. Create Models & Migrations
+
+
+We need tables:
+
+users
+categories
+posts
+comments
+Category Model
+php artisan make:model Category -m
+Migration:
+
+database/migrations/create_categories_table.php
+public function up()
+{
+Schema::create('categories', function (Blueprint $table) {
+$table->id();
+$table->string('name');
+$table->timestamps();
+});
+}
+Post Model
+php artisan make:model Post -m
+Migration:
+
+public function up()
+{
+Schema::create('posts', function (Blueprint $table) {
+
+$table->id();
+
+$table->string('title');
+
+$table->text('description');
+
+$table->unsignedBigInteger('category_id');
+
+$table->unsignedBigInteger('user_id');
+
+$table->timestamps();
+
+$table->foreign('category_id')->references('id')->on('categories');
+
+$table->foreign('user_id')->references('id')->on('users');
+
+});
+}
+Comments Model
+php artisan make:model Comment -m
+Migration
+
+public function up()
+{
+Schema::create('comments', function (Blueprint $table) {
+
+$table->id();
+
+$table->unsignedBigInteger('post_id');
+
+$table->unsignedBigInteger('user_id');
+
+$table->text('comment');
+
+$table->timestamps();
+
+$table->foreign('post_id')->references('id')->on('posts');
+
+$table->foreign('user_id')->references('id')->on('users');
+
+});
+}
+Run migration
+
+php artisan migrate
+
+
+
+5️.Insert Basic Records
+
+
+Open database/seeders/DatabaseSeeder.php
+
+use App\Models\User;
+use App\Models\Category;
+use App\Models\Post;
+
+public function run()
+{
+
+User::create([
+'name'=>'Admin',
+'email'=>'admin@gmail.com',
+'password'=>bcrypt('123456'),
+'is_admin'=>1
+]);
+
+User::create([
+'name'=>'User',
+'email'=>'user@gmail.com',
+'password'=>bcrypt('123456'),
+'is_admin'=>0
+]);
+
+Category::create(['name'=>'Technology']);
+Category::create(['name'=>'Laravel']);
+Category::create(['name'=>'Programming']);
+
+}
+Run:
+
+php artisan db:seed
+
+
+
+6️.Relationships (Important)
+
+
+
+Category Model
+app/Models/Category.php
+class Category extends Model
+{
+protected $fillable=['name'];
+
+public function posts()
+{
+return $this->hasMany(Post::class);
+}
+}
+Post Model
+app/Models/Post.php
+class Post extends Model
+{
+protected $fillable=['title','description','category_id','user_id'];
+
+public function category()
+{
+return $this->belongsTo(Category::class);
+}
+
+public function comments()
+{
+return $this->hasMany(Comment::class);
+}
+}
+Comment Model
+app/Models/Comment.php
+class Comment extends Model
+{
+protected $fillable=['post_id','user_id','comment'];
+
+public function post()
+{
+return $this->belongsTo(Post::class);
+}
+}
+
+
+7️.Create Authentication (Login)
+
+
+Laravel login system
+
+composer require laravel/ui
+Install
+
+php artisan ui bootstrap --auth
+Run
+
+npm install
+npm run dev
+
+
+8️.Admin Middleware
+
+
+
+Create middleware
+
+php artisan make:middleware AdminMiddleware
+app/Http/Middleware/AdminMiddleware.php
+public function handle($request, Closure $next)
+{
+if(auth()->user()->is_admin !=1)
+{
+return redirect('/');
+}
+
+return $next($request);
+}
+Register middleware
+
+app/Http/Kernel.php
+'admin' => \App\Http\Middleware\AdminMiddleware::class,
+
+
+
+9️.Create Controllers
+
+
+
+php artisan make:controller Admin/CategoryController --resource
+
+php artisan make:controller Admin/PostController --resource
+
+php artisan make:controller CommentController
+
+php artisan make:controller HomeController
+
+
+
+10. Routes
+
+
+routes/web.php
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\CommentController;
+
+Route::get('/',[HomeController::class,'index']);
+
+Route::get('/post/{id}',[HomeController::class,'show']);
+
+Route::post('/comment',[CommentController::class,'store'])->middleware('auth');
+
+Route::middleware(['auth','admin'])->prefix('admin')->group(function(){
+
+Route::resource('categories',CategoryController::class);
+
+Route::resource('posts',PostController::class);
+
+});
+
+
+1️1️. Admin Category CRUD Controller
+
+
+app/Http/Controllers/Admin/CategoryController.php
+class CategoryController extends Controller
+{
+
+public function index()
+{
+$categories = Category::all();
+
+return view('admin.categories.index',compact('categories'));
+}
+
+public function create()
+{
+return view('admin.categories.create');
+}
+
+public function store(Request $request)
+{
+Category::create($request->all());
+
+return redirect()->route('categories.index')
+->with('success','Category Added');
+}
+
+public function edit($id)
+{
+$category=Category::find($id);
+
+return view('admin.categories.edit',compact('category'));
+}
+
+public function update(Request $request,$id)
+{
+$category=Category::find($id);
+
+$category->update($request->all());
+
+return redirect()->route('categories.index')
+->with('success','Category Updated');
+}
+
+public function destroy($id)
+{
+Category::destroy($id);
+
+return redirect()->route('categories.index')
+->with('success','Category Deleted');
+}
+
+}
+
+
+12.Category List View
+
+
+resources/views/admin/categories/index.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h3>Categories</h3>
+
+<a href="{{route('categories.create')}}" class="btn btn-primary">Add</a>
+
+<table class="table">
+
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Action</th>
+</tr>
+
+@foreach($categories as $category)
+
+<tr>
+
+<td>{{$category->id}}</td>
+
+<td>{{$category->name}}</td>
+
+<td>
+
+<a href="{{route('categories.edit',$category->id)}}" class="btn btn-warning">Edit</a>
+
+<form method="POST" action="{{route('categories.destroy',$category->id)}}">
+
+@csrf
+@method('DELETE')
+
+<button class="btn btn-danger">Delete</button>
+
+</form>
+
+</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+
+
+13. Site Home Page
+
+
+app/Http/Controllers/HomeController.php
+public function index()
+{
+
+$posts=Post::latest()->get();
+
+$categories=Category::all();
+
+return view('site.home',compact('posts','categories'));
+
+}
+Site Home View
+resources/views/site/home.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<div class="row">
+
+<div class="col-md-8">
+
+@foreach($posts as $post)
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h4>
+
+<a href="/post/{{$post->id}}">
+
+{{$post->title}}
+
+</a>
+
+</h4>
+
+<p>
+
+{{$post->description}}
+
+</p>
+
+<p>
+
+Category : {{$post->category->name}}
+
+</p>
+
+<p>
+
+Comments : {{$post->comments->count()}}
+
+</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+</div>
+
+<div class="col-md-4">
+
+<h4>Categories</h4>
+
+<ul>
+
+@foreach($categories as $category)
+
+<li>{{$category->name}}</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+</div>
+
+@endsection
+
+
+
+
+14. Comment Add Form
+
+
+
+Inside post detail page:
+
+@if(auth()->check())
+
+<form method="POST" action="/comment">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{$post->id}}">
+
+<textarea name="comment" class="form-control"></textarea>
+
+<button class="btn btn-primary mt-2">Add Comment</button>
+
+</form>
+
+@endif
+
+
+
+
+
+1️. Project Folder Structure
+
+
+Your project should look like this:
+
+app
+ ├── Models
+ │     Category.php
+ │     Post.php
+ │     Comment.php
+
+app/Http/Controllers
+ ├── Admin
+ │     DashboardController.php
+ │     CategoryController.php
+ │     PostController.php
+ ├── HomeController.php
+ ├── CommentController.php
+
+resources/views
+ ├── layouts
+ │     app.blade.php
+ ├── admin
+ │     dashboard.blade.php
+ │
+ │     categories
+ │        index.blade.php
+ │        create.blade.php
+ │        edit.blade.php
+ │
+ │     posts
+ │        index.blade.php
+ │        create.blade.php
+ │        edit.blade.php
+ │
+ ├── site
+ │     home.blade.php
+ │     post.blade.php
+
+
+
+2️. Main Layout UI
+
+
+Create:
+
+resources/views/layouts/app.blade.php
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Laravel Blog</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+
+<div class="container">
+
+<a class="navbar-brand" href="/">Laravel Blog</a>
+
+@if(auth()->check())
+
+<a href="/admin/dashboard" class="btn btn-light">Dashboard</a>
+
+@endif
+
+</div>
+
+</nav>
+
+<div class="container mt-4">
+
+@yield('content')
+
+</div>
+
+</body>
+</html>
+
+What is this?
+
+
+3️. Admin Dashboard UI
+
+
+resources/views/admin/dashboard.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h3>Admin Dashboard</h3>
+
+<div class="row">
+
+<div class="col-md-4">
+
+<div class="card bg-primary text-white">
+
+<div class="card-body">
+
+Total Posts
+
+<h2>{{$posts}}</h2>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-success text-white">
+
+<div class="card-body">
+
+Total Categories
+
+<h2>{{$categories}}</h2>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-danger text-white">
+
+<div class="card-body">
+
+Total Comments
+
+<h2>{{$comments}}</h2>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<br>
+
+<a href="/admin/posts" class="btn btn-primary">Manage Posts</a>
+
+<a href="/admin/categories" class="btn btn-success">Manage Categories</a>
+
+@endsection
+
+
+4️. Category List UI
+
+
+resources/views/admin/categories/index.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h3>Categories</h3>
+
+<a href="/admin/categories/create" class="btn btn-primary mb-2">Add Category</a>
+
+@if(session('success'))
+
+<div class="alert alert-success">
+
+{{session('success')}}
+
+</div>
+
+@endif
+
+<table class="table table-bordered">
+
+<tr>
+
+<th>ID</th>
+
+<th>Name</th>
+
+<th>Action</th>
+
+</tr>
+
+@foreach($categories as $category)
+
+<tr>
+
+<td>{{$category->id}}</td>
+
+<td>{{$category->name}}</td>
+
+<td>
+
+<a href="/admin/categories/{{$category->id}}/edit" class="btn btn-warning">Edit</a>
+
+<form action="/admin/categories/{{$category->id}}" method="POST">
+
+@csrf
+@method('DELETE')
+
+<button class="btn btn-danger">Delete</button>
+
+</form>
+
+</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+
+5️. Category Add UI
+
+resources/views/admin/categories/create.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h3>Add Category</h3>
+
+<form method="POST" action="/admin/categories">
+
+@csrf
+
+<div class="mb-3">
+
+<label>Category Name</label>
+
+<input type="text" name="name" class="form-control">
+
+</div>
+
+<button class="btn btn-primary">Save</button>
+
+</form>
+
+@endsection
+
+
+6️. Post List UI
+
+
+resources/views/admin/posts/index.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h3>Posts</h3>
+
+<a href="/admin/posts/create" class="btn btn-primary">Add Post</a>
+
+<table class="table mt-3">
+
+<tr>
+
+<th>ID</th>
+<th>Title</th>
+<th>Category</th>
+<th>Comments</th>
+<th>Action</th>
+
+</tr>
+
+@foreach($posts as $post)
+
+<tr>
+
+<td>{{$post->id}}</td>
+
+<td>{{$post->title}}</td>
+
+<td>{{$post->category->name}}</td>
+
+<td>{{$post->comments->count()}}</td>
+
+<td>
+
+<a href="/admin/posts/{{$post->id}}/edit" class="btn btn-warning">Edit</a>
+
+<form action="/admin/posts/{{$post->id}}" method="POST">
+
+@csrf
+@method('DELETE')
+
+<button class="btn btn-danger">Delete</button>
+
+</form>
+
+</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+
+
+7️. Blog Home Page UI
+
+
+resources/views/site/home.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<div class="row">
+
+<div class="col-md-8">
+
+@foreach($posts as $post)
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h4>
+
+<a href="/post/{{$post->id}}">
+
+{{$post->title}}
+
+</a>
+
+</h4>
+
+<p>
+
+{{$post->description}}
+
+</p>
+
+<p>
+
+Category : {{$post->category->name}}
+
+</p>
+
+<p>
+
+Comments : {{$post->comments->count()}}
+
+</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+</div>
+
+<div class="col-md-4">
+
+<h4>Categories</h4>
+
+<ul>
+
+@foreach($categories as $category)
+
+<li>{{$category->name}}</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+</div>
+
+@endsection
+
+
+8️. Post Detail Page
+
+
+resources/views/site/post.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h2>{{$post->title}}</h2>
+
+<p>
+
+Category : {{$post->category->name}}
+
+</p>
+
+<p>
+
+{{$post->description}}
+
+</p>
+
+<hr>
+
+<h4>Comments</h4>
+
+@foreach($post->comments as $comment)
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+{{$comment->comment}}
+
+</div>
+
+</div>
+
+@endforeach
+
+@if(auth()->check())
+
+<h4>Add Comment</h4>
+
+<form method="POST" action="/comment">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{$post->id}}">
+
+<textarea name="comment" class="form-control"></textarea>
+
+<button class="btn btn-primary mt-2">Submit</button>
+
+</form>
+
+@endif
+
+@endsection
+
+
+9️. jQuery Form Validation
+
+
+
+Example login validation:
+
+<script>
+
+$("#loginForm").validate({
+
+rules:{
+email:"required",
+password:"required"
+}
+
+});
+
+</script>
+
+
+
+
+
+
+
+1️. Admin Layout (Sidebar UI)
+
+
+Create:
+
+resources/views/admin/layout.blade.php
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Admin Panel</title>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+
+body{
+background:#f5f5f5;
+}
+
+.sidebar{
+width:220px;
+height:100vh;
+background:#2c3e50;
+position:fixed;
+color:white;
+}
+
+.sidebar a{
+display:block;
+padding:12px;
+color:white;
+text-decoration:none;
+}
+
+.sidebar a:hover{
+background:#1abc9c;
+}
+
+.content{
+margin-left:230px;
+padding:20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="sidebar">
+
+<h4 class="text-center mt-3">Admin</h4>
+
+<a href="/admin/dashboard">
+<i class="fa fa-home"></i> Overview
+</a>
+
+<a href="/admin/posts">
+<i class="fa fa-file"></i> Posts
+</a>
+
+<a href="/admin/categories">
+<i class="fa fa-list"></i> Categories
+</a>
+
+<a href="/logout">
+<i class="fa fa-sign-out"></i> Logout
+</a>
+
+</div>
+
+<div class="content">
+
+@yield('content')
+
+</div>
+
+</body>
+</html>
+
+What is this?
+
+
+2️. Admin Overview Page (Screen 1)
+
+
+resources/views/admin/dashboard.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Overview</h3>
+
+<div class="card">
+
+<div class="card-body">
+
+<h5>Your Site Statistics</h5>
+
+<ul>
+
+<li>{{$posts}} published posts</li>
+
+<li>{{$comments}} comments</li>
+
+</ul>
+
+</div>
+
+</div>
+
+@endsection
+
+
+
+3️. Category List Page (Screen 2)
+
+
+
+resources/views/admin/categories/index.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h3>All Categories</h3>
+
+<a href="/admin/categories/create"
+class="btn btn-primary mb-3">
+New Category
+</a>
+
+<table class="table table-bordered">
+
+<tr>
+
+<th>Edit</th>
+<th>Name</th>
+<th>Delete</th>
+
+</tr>
+
+@foreach($categories as $category)
+
+<tr>
+
+<td>
+<a href="/admin/categories/{{$category->id}}/edit"
+class="btn btn-sm btn-info">
+Edit
+</a>
+</td>
+
+<td>{{$category->name}}</td>
+
+<td>
+
+<form action="/admin/categories/{{$category->id}}"
+method="POST">
+
+@csrf
+@method('DELETE')
+
+<button class="btn btn-sm btn-danger">
+Delete
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+
+
+
+4️. Blog Home UI (Public Page)
+
+
+
+Create:
+
+resources/views/site/home.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<div class="row">
+
+<div class="col-md-8">
+
+@foreach($posts as $post)
+
+<div class="mb-4">
+
+<h4>
+
+<a href="/post/{{$post->id}}" class="post-link">
+
+{{$post->title}}
+
+</a>
+
+</h4>
+
+<p>
+
+{{ Str::limit($post->description,150) }}
+
+</p>
+
+<span class="badge bg-secondary">
+
+{{$post->category->name}}
+
+</span>
+
+<br>
+
+<small>
+
+Posted on {{$post->created_at->format('F d, Y')}}
+
+</small>
+
+<hr>
+
+</div>
+
+@endforeach
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card mb-3">
+
+<div class="card-header bg-success text-white">
+
+Categories
+
+</div>
+
+<ul class="list-group">
+
+@foreach($categories as $category)
+
+<li class="list-group-item">
+
+<a href="/category/{{$category->id}}">
+
+{{$category->name}}
+
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+<div class="card">
+
+<div class="card-header bg-success text-white">
+
+Archives
+
+</div>
+
+<ul class="list-group">
+
+@foreach($archives as $archive)
+
+<li class="list-group-item">
+
+<a href="/archive/{{$archive->month}}/{{$archive->year}}">
+
+{{$archive->month}} {{$archive->year}}
+
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+
+
+5️. Hover Effect (IMPORTANT – Your Screenshot Requirement)
+
+
+
+Add this CSS:
+
+public/css/style.css
+.post-link{
+
+color:#2c3e50;
+text-decoration:none;
+
+}
+
+.post-link:hover{
+
+color:#1abc9c;
+text-decoration:underline;
+
+}
+Include in layout:
+
+<link rel="stylesheet" href="/css/style.css">
+Now hover will work like screenshot.
+
+
+
+6️.Post Detail Page with Comments
+
+
+resources/views/site/post.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h2>{{$post->title}}</h2>
+
+<p>
+
+Category :
+<span class="badge bg-secondary">
+
+{{$post->category->name}}
+
+</span>
+
+</p>
+
+<p>{{$post->description}}</p>
+
+<hr>
+
+<h4>Comments</h4>
+
+@foreach($post->comments as $comment)
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+{{$comment->comment}}
+
+</div>
+
+</div>
+
+@endforeach
+
+<hr>
+
+<h4>Leave a Reply</h4>
+
+<form method="POST" action="/comment">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{$post->id}}">
+
+<div class="mb-2">
+
+<input type="text"
+class="form-control"
+name="name"
+placeholder="Name">
+
+</div>
+
+<div class="mb-2">
+
+<input type="email"
+class="form-control"
+name="email"
+placeholder="Email">
+
+</div>
+
+<div class="mb-2">
+
+<textarea
+class="form-control"
+name="comment"
+rows="4"></textarea>
+
+</div>
+
+<button class="btn btn-success">
+
+Submit Comment
+
+</button>
+
+</form>
+
+@endsection
+
+
+7️.Sidebar Filters (Category + Archive)
+
+
+Routes:
+
+Route::get('/category/{id}',[HomeController::class,'category']);
+Route::get('/archive/{month}/{year}',[HomeController::class,'archive']);
+
+
+8️.Controller Example
+
+
+app/Http/Controllers/HomeController.php
+public function index()
+{
+
+$posts = Post::latest()->get();
+
+$categories = Category::all();
+
+$archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+->groupBy('year','month')
+->get();
+
+return view('site.home',
+compact('posts','categories','archives'));
+
+}
+
+
+Result
+
+
+Create Models & Migrations
+
+We need tables:
+
+users
+categories
+posts
+comments
+Category Model
+php artisan make:model Category -m
+
+Migration:
+
+database/migrations/create_categories_table.php
+public function up()
+{
+Schema::create('categories', function (Blueprint $table) {
+$table->id();
+$table->string('name');
+$table->timestamps();
+});
+}
+Post Model
+php artisan make:model Post -m
+
+Migration:
+
+public function up()
+{
+Schema::create('posts', function (Blueprint $table) {
+
+$table->id();
+
+$table->string('title');
+
+$table->text('description');
+
+$table->unsignedBigInteger('category_id');
+
+$table->unsignedBigInteger('user_id');
+
+$table->timestamps();
+
+$table->foreign('category_id')->references('id')->on('categories');
+
+$table->foreign('user_id')->references('id')->on('users');
+
+});
+}
+Comments Model
+php artisan make:model Comment -m
+
+Migration
+
+public function up()
+{
+Schema::create('comments', function (Blueprint $table) {
+
+$table->id();
+
+$table->unsignedBigInteger('post_id');
+
+$table->unsignedBigInteger('user_id');
+
+$table->text('comment');
+
+$table->timestamps();
+
+$table->foreign('post_id')->references('id')->on('posts');
+
+$table->foreign('user_id')->references('id')->on('users');
+
+});
+}
+
+Run migration
+
+php artisan migrate
+
+
+
+5️. Insert Basic Records
+
+
+
+Open database/seeders/DatabaseSeeder.php
+
+use App\Models\User;
+use App\Models\Category;
+use App\Models\Post;
+
+public function run()
+{
+
+User::create([
+'name'=>'Admin',
+'email'=>'admin@gmail.com',
+'password'=>bcrypt('123456'),
+'is_admin'=>1
+]);
+
+User::create([
+'name'=>'User',
+'email'=>'user@gmail.com',
+'password'=>bcrypt('123456'),
+'is_admin'=>0
+]);
+
+Category::create(['name'=>'Technology']);
+Category::create(['name'=>'Laravel']);
+Category::create(['name'=>'Programming']);
+
+}
+
+Run:
+
+php artisan db:seed---
+
+
+---------------------
+
+
+1️. Create New Laravel Project
+
+
+
+Open Terminal / CMD
+
+composer create-project laravel/laravel blog
+Go inside project
+
+cd blog
+Start server
+
+php artisan serve
+Open browser
+
+http://127.0.0.1:8000
+
+
+2️. Setup Database
+
+
+Open .env
+
+DB_DATABASE=blog
+DB_USERNAME=root
+DB_PASSWORD=
+Create database in phpMyAdmin
+
+blog
+
+
+3️. Create Models with Migration
+
+
+Laravel can create Model + Migration together
+
+Syntax
+
+php artisan make:model ModelName -m
+
+
+4️. Create Category Model + Migration
+
+
+Run command
+
+php artisan make:model Category -m
+Files created
+
+app/Models/Category.php
+database/migrations/xxxx_create_categories_table.php
+Edit Migration
+Open
+
+database/migrations/xxxx_create_categories_table.php
+Replace with:
+
+public function up()
+{
+    Schema::create('categories', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->timestamps();
+    });
+}
+
+
+5️. Create Post Model + Migration
+
+
+Run
+
+php artisan make:model Post -m
+Open migration
+
+database/migrations/xxxx_create_posts_table.php
+Paste
+
+public function up()
+{
+    Schema::create('posts', function (Blueprint $table) {
+
+        $table->id();
+        $table->string('title');
+        $table->text('description');
+        $table->unsignedBigInteger('category_id');
+        $table->unsignedBigInteger('user_id');
+        $table->timestamps();
+
+        $table->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
+        $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+    });
+}
+
+
+6️. Create Comment Model + Migration
+
+
+Run command
+
+php artisan make:model Comment -m
+Open migration
+
+database/migrations/xxxx_create_comments_table.php
+Paste
+
+public function up()
+{
+    Schema::create('comments', function (Blueprint $table) {
+
+        $table->id();
+        $table->unsignedBigInteger('post_id');
+        $table->unsignedBigInteger('user_id');
+        $table->text('comment');
+        $table->timestamps();
+
+        $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade');
+        $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+    });
+}
+
+
+7️. Add Admin Column to Users Table
+
+
+Open
+
+database/migrations/xxxx_create_users_table.php
+Add this line
+
+$table->boolean('is_admin')->default(0);
+Example
+
+$table->string('email')->unique();
+$table->boolean('is_admin')->default(0);
+$table->timestamp('email_verified_at')->nullable();
+
+
+8️. Run Migration
+
+
+Run
+
+php artisan migrate
+Tables created
+
+users
+categories
+posts
+comments
+
+
+9️. Create Seeder
+
+
+
+Run command
+
+php artisan make:seeder DatabaseSeeder
+Open
+
+database/seeders/DatabaseSeeder.php
+Replace with
+
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\User;
+use App\Models\Category;
+use App\Models\Post;
+
+class DatabaseSeeder extends Seeder
+{
+    public function run()
+    {
+
+        User::create([
+            'name'=>'Admin',
+            'email'=>'admin@gmail.com',
+            'password'=>bcrypt('123456'),
+            'is_admin'=>1
+        ]);
+
+        User::create([
+            'name'=>'User',
+            'email'=>'user@gmail.com',
+            'password'=>bcrypt('123456'),
+            'is_admin'=>0
+        ]);
+
+        Category::create(['name'=>'Technology']);
+        Category::create(['name'=>'Laravel']);
+        Category::create(['name'=>'Programming']);
+
+    }
+}
+
+
+10. Run Seeder
+Run
+
+php artisan db:seed
+Data inserted:
+
+Users
+Name	Email	Password
+Admin	admin@gmail.com	123456
+User	user@gmail.com	123456
+Categories
+Technology
+Laravel
+Programming
+
+
+11. Verify in Database
+
+Open phpMyAdmin
+
+Check tables
+
+users
+categories
+posts
+comments
+You should see inserted records.
+
+
+Create Models with Migration
+
+Laravel can create Model + Migration together
+
+Syntax
+
+php artisan make:model ModelName -m
+
+whether i want run this command or this for refernce
+
+
+php artisan make:model ModelName -m
+This command automatically creates:
+
+1️. Model file
+2️. Migration file
+
+Example (Your Project)
+
+
+1️. Create Category Model + Migration
+
+
+Run in terminal:
+
+php artisan make:model Category -m
+Laravel will create:
+
+app/Models/Category.php
+database/migrations/xxxx_create_categories_table.php
+
+
+2️.Create Post Model + Migration
+
+
+Run:
+
+php artisan make:model Post -m
+Files created:
+
+app/Models/Post.php
+database/migrations/xxxx_create_posts_table.php
+
+
+3️. Create Comment Model + Migration
+
+
+Run:
+
+php artisan make:model Comment -m
+Files created:
+
+app/Models/Comment.php
+database/migrations/xxxx_create_comments_table.php
+Why -m ?
+-m means migration
+
+So this command:
+
+php artisan make:model Category -m
+Is same as running two commands:
+
+php artisan make:model Category
+php artisan make:migration create_categories_table
+But Laravel does it automatically.
+
+After Running Commands
+You must edit the migration files and add table columns.
+
+Example:
+
+database/migrations/xxxx_create_categories_table.php
+Then run:
+
+php artisan migrate
+This will create tables in database.
+
+Correct Order For Your Assignment
+Run commands in this order:
+
+php artisan make:model Category -m
+php artisan make:model Post -m
+php artisan make:model Comment -m
+Then edit migrations → then run:
+
+php artisan migrate
+ Conclusion
+
+Command	Need to run?
+php artisan make:model Category -m	
+php artisan make:model Post -m	
+php artisan make:model Comment -m	
+They are not just reference — you must execute them.
+
+If you want, I can also show you the EXACT folder structure your Laravel Blog project should have (very useful for your assignment).
+
+
+'password'=>bcrypt('123456'), --> they mention hash ?
+
+
+
+'password' => bcrypt('123456'),
+
+ What is Hashing?
+Hashing means converting a password into a secure encrypted string before storing it in the database.
+
+Example:
+
+Normal password
+
+123456
+Stored in database (hashed)
+
+$2y$10$Xh3sD8sdfkj234ksdfjksdfkjsdfk
+So if someone hacks the database, they cannot see the real password.
+
+Why bcrypt() ?
+Laravel uses bcrypt hashing algorithm.
+
+bcrypt('123456')
+It converts the password into a hashed value.
+
+Better Laravel Way (Recommended)
+Laravel officially recommends using Hash::make()
+
+Add this at the top:
+
+use Illuminate\Support\Facades\Hash;
+Then write:
+
+'password' => Hash::make('123456'),
+Example:
+
+User::create([
+    'name'=>'Admin',
+    'email'=>'admin@gmail.com',
+    'password'=>Hash::make('123456'),
+    'is_admin'=>1
+]);
+bcrypt vs Hash::make
+Method	Works?	Recommended
+bcrypt()
+Hash::make()	
+Your Assignment Requirement
+Requirement says:
+
+Password should be hashed always
+
+So either is acceptable:
+
+bcrypt('123456')
+OR
+
+Hash::make('123456')
+Both satisfy the requirement 
+
+ Best for your project
+
+'password' => Hash::make('123456'),
+If you want, I can also show you how the login system checks the hashed password internally (very useful for Review 2 – Login Page).
+
+
+
