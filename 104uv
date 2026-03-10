@@ -1,0 +1,121 @@
+Correct Structure (Laravel Blade Rule)
+Layout file
+
+resources/views/admin/dashboard.blade.php
+
+This file only contains the main layout.
+
+You already did it mostly correct.
+
+But remove the extra CSS selector head{ margin-left:60px; } because it is invalid and can shift layout.
+
+/* REMOVE THIS */
+head{
+    margin-left:60px;
+}
+ Fix unverified.blade.php
+
+ Remove these lines:
+
+<!DOCTYPE html>
+<html>
+<head>
+<body>
+</body>
+</html>
+
+✔ Correct file:
+
+@extends('admin.dashboard')
+
+@section('content')
+
+<h2>Unverified Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Image</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Phone</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+   <td>{{ $user->id }}</td>
+   <td>
+      <img src="{{ $user->image ? asset('uploads/'.$user->image) : asset('images/default.png') }}" width="30">
+   </td>
+   <td>{{ $user->name }}</td>
+   <td>{{ $user->email }}</td>
+   <td>{{ $user->mobile }}</td>
+   <td>Verify Button...</td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+ Fix verified.blade.php
+
+Same issue.
+
+Remove:
+
+<!DOCTYPE html>
+<html>
+<head>
+<body>
+</body>
+</html>
+
+Keep only:
+
+@extends('admin.dashboard')
+
+@section('content')
+
+<h2>Verified Users</h2>
+
+<table border="1" cellpadding="10">
+
+....
+
+@endsection
+Fix inactive.blade.php
+
+Also remove:
+
+<!DOCTYPE html>
+<html>
+<head>
+<body>
+</body>
+</html>
+ Final Correct File Structure
+resources/views/admin/
+
+dashboard.blade.php  → layout
+
+unverified.blade.php → child
+verified.blade.php   → child
+inactive.blade.php   → child
+
+Child files must only contain:
+
+@extends
+@section
+@endsection
+
+NOT full HTML.
+
+ Why Sidebar Moves
+
+Because browser reads:
+
+dashboard.html
+   └ unverified.html (another html page inside)
+
+So CSS flex layout breaks → sidebar shifts.
