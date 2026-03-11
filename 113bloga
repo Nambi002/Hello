@@ -1,0 +1,559 @@
+Step 1 — Create Laravel Project
+
+Install Laravel:
+
+composer create-project laravel/laravel blog-project
+
+Move into project:
+
+cd blog-project
+
+Run server:
+
+php artisan serve
+
+Open:
+
+http://127.0.0.1:8000
+
+
+
+
+Step 2 — Configure Database
+
+Open .env
+
+DB_DATABASE=blog_db
+DB_USERNAME=root
+DB_PASSWORD=
+
+Create database in phpMyAdmin
+
+blog_db
+
+
+
+Step 3 — Install Bootstrap + jQuery + FontAwesome
+
+Open
+
+resources/views/layouts/app.blade.php
+
+Add:
+
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Laravel Blog</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</head>
+
+<body>
+
+@yield('content')
+
+</body>
+</html>
+
+
+
+Step 4 — Create Models & Migrations
+
+Run:
+
+php artisan make:model User -m
+php artisan make:model Category -m
+php artisan make:model Post -m
+php artisan make:model Comment -m
+
+
+
+
+ Step 5 — Database Schema
+
+
+Users Table
+id
+name
+email
+password
+role
+created_at
+updated_at
+
+Migration:
+
+Schema::create('users', function (Blueprint $table) {
+
+$table->id();
+$table->string('name');
+$table->string('email')->unique();
+$table->string('password');
+$table->enum('role',['admin','user']);
+$table->timestamps();
+
+});
+Categories Table
+id
+title
+created_at
+updated_at
+
+Migration:
+
+Schema::create('categories', function (Blueprint $table) {
+
+$table->id();
+$table->string('title');
+$table->timestamps();
+
+});
+Posts Table
+id
+title
+content
+user_id
+created_at
+updated_at
+
+Migration:
+
+Schema::create('posts', function (Blueprint $table) {
+
+$table->id();
+$table->string('title');
+$table->text('content');
+$table->foreignId('user_id')->constrained()->onDelete('cascade');
+$table->timestamps();
+
+});
+Post Category Pivot Table
+post_category
+Schema::create('post_category', function (Blueprint $table) {
+
+$table->id();
+$table->foreignId('post_id')->constrained()->onDelete('cascade');
+$table->foreignId('category_id')->constrained()->onDelete('cascade');
+
+});
+Comments Table
+id
+post_id
+user_id
+comment
+created_at
+Schema::create('comments', function (Blueprint $table) {
+
+$table->id();
+
+$table->foreignId('post_id')->constrained()->onDelete('cascade');
+$table->foreignId('user_id')->constrained()->onDelete('cascade');
+
+$table->text('comment');
+
+$table->timestamps();
+
+});
+
+
+ Step 6 — Run Migration
+
+php artisan migrate
+
+
+Step 7 — Insert Basic Records
+
+
+Open database/seeders/DatabaseSeeder.php
+
+use App\Models\User;
+use App\Models\Category;
+use App\Models\Post;
+use Illuminate\Support\Facades\Hash;
+
+User::create([
+'name'=>'Admin',
+'email'=>'admin@gmail.com',
+'password'=>Hash::make('123456'),
+'role'=>'admin'
+]);
+
+User::create([
+'name'=>'User',
+'email'=>'user@gmail.com',
+'password'=>Hash::make('123456'),
+'role'=>'user'
+]);
+
+Category::create(['title'=>'Technology']);
+Category::create(['title'=>'News']);
+Category::create(['title'=>'Sports']);
+
+Post::create([
+'title'=>'First Blog',
+'content'=>'This is first blog post',
+'user_id'=>1
+]);
+
+Run:
+
+php artisan db:seed
+
+
+
+ Step 8 — Create Admin Controllers
+
+
+php artisan make:controller Admin/LoginController
+php artisan make:controller Admin/DashboardController
+php artisan make:controller Admin/PostController
+php artisan make:controller Admin/CategoryController
+php artisan make:controller Admin/CommentController
+
+
+
+ Step 9 — Login Controller
+
+
+use Illuminate\Support\Facades\Auth;
+
+public function login(Request $request)
+{
+
+$credentials = $request->only('email','password');
+
+if(Auth::attempt($credentials))
+{
+
+if(Auth::user()->role == 'admin')
+{
+return redirect('/admin/dashboard');
+}
+
+return redirect('/');
+}
+
+return back()->with('error','Invalid Login');
+
+}
+
+
+
+10. Step 10 — Login UI
+
+
+resources/views/admin/login.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container">
+
+<div class="row justify-content-center">
+
+<div class="col-md-4">
+
+<div class="card p-4">
+
+<h3 class="text-center">Login</h3>
+
+<form method="POST" action="/admin/login">
+
+@csrf
+
+<div class="mb-3">
+
+<label>Email</label>
+
+<input type="email" name="email" class="form-control">
+
+</div>
+
+<div class="mb-3">
+
+<label>Password</label>
+
+<input type="password" name="password" class="form-control">
+
+</div>
+
+<button class="btn btn-primary w-100">Login</button>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+
+
+
+11.Admin Dashboard UI
+
+
+
+
+resources/views/admin/layout.blade.php
+<div class="d-flex">
+
+<div style="width:200px;background:black;color:white;height:100vh">
+
+<h4 class="p-3">Blog</h4>
+
+<ul class="list-unstyled p-3">
+
+<li><a href="/admin/dashboard" class="text-white">Overview</a></li>
+
+<li><a href="/admin/posts" class="text-white">Posts</a></li>
+
+<li><a href="/admin/categories" class="text-white">Categories</a></li>
+
+<li><a href="/logout" class="text-white">Logout</a></li>
+
+</ul>
+
+</div>
+
+<div class="p-4 w-100">
+
+@yield('admin-content')
+
+</div>
+
+</div>
+
+
+
+12. Categories CRUD
+
+
+
+Controller example:
+
+public function index()
+{
+$categories = Category::all();
+return view('admin.categories.index',compact('categories'));
+}
+
+public function store(Request $request)
+{
+
+Category::create([
+'title'=>$request->title
+]);
+
+return redirect()->back()->with('success','Category Added');
+
+}
+
+
+
+13. Post CRUD
+
+
+
+Post Controller:
+
+public function index()
+{
+
+$posts = Post::withCount('comments')->get();
+
+return view('admin.posts.index',compact('posts'));
+
+}
+
+
+
+14. Comment Count Link
+
+
+
+<td>
+
+<a href="/admin/comments/{{$post->id}}">
+{{$post->comments_count}}
+
+</a>
+
+</td>
+
+
+15.Public Site — Home Page
+
+
+Controller:
+
+public function home()
+{
+
+$posts = Post::latest()->paginate(5);
+
+$categories = Category::all();
+
+return view('site.home',compact('posts','categories'));
+
+}
+
+
+16. Blog List UI
+
+
+
+resources/views/site/home.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container">
+
+<div class="row">
+
+<div class="col-md-8">
+
+@foreach($posts as $post)
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h3>{{$post->title}}</h3>
+
+<p>{{$post->content}}</p>
+
+<a href="/post/{{$post->id}}" class="btn btn-primary">Read More</a>
+
+</div>
+
+</div>
+
+@endforeach
+
+</div>
+
+<div class="col-md-4">
+
+<h4>Categories</h4>
+
+@foreach($categories as $cat)
+
+<a href="/category/{{$cat->id}}">{{$cat->title}}</a>
+
+@endforeach
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+
+
+17.Post Detail Page
+
+
+
+public function show($id)
+{
+
+$post = Post::with('comments')->find($id);
+
+return view('site.detail',compact('post'));
+
+}
+
+
+
+18. Comment Form
+
+
+<form method="POST" action="/comment">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{$post->id}}">
+
+<textarea name="comment" class="form-control"></textarea>
+
+<button class="btn btn-success mt-2">Add Comment</button>
+
+</form>
+
+
+19. jQuery Validation (Required)
+
+
+$("form").validate({
+
+rules:{
+email:"required",
+password:"required"
+}
+
+});
+
+
+
+20. Routes
+
+
+routes/web.php
+Route::get('/',[SiteController::class,'home']);
+
+Route::get('/post/{id}',[SiteController::class,'show']);
+
+Route::post('/comment',[CommentController::class,'store']);
+
+Route::get('/admin/login',[LoginController::class,'index']);
+Route::post('/admin/login',[LoginController::class,'login']);
+
+Route::get('/admin/dashboard',[DashboardController::class,'index']);
+
+Route::resource('/admin/categories',CategoryController::class);
+Route::resource('/admin/posts',PostController::class);
+
+
+
+
+ Your Project Structure
+app
+ ├Controllers
+ │ ├Admin
+ │ │ ├LoginController
+ │ │ ├PostController
+ │ │ ├CategoryController
+ │ │ └CommentController
+ │
+ ├Models
+ │ ├User
+ │ ├Post
+ │ ├Category
+ │ └Comment
+
+resources
+ ├views
+ │ ├admin
+ │ │ ├login
+ │ │ ├posts
+ │ │ └categories
+ │
+ │ ├site
+ │ │ ├home
+ │ │ └detail
