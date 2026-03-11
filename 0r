@@ -1,0 +1,10 @@
+use App\Http\Controllers\Admin\PostController;
+
+Route::prefix('admin')->middleware('auth')->group(function(){
+
+Route::resource('posts', PostController::class);
+
+Route::get('posts/{id}/comments',
+[PostController::class,'comments'])->name('posts.comments');
+
+});
