@@ -1,0 +1,112 @@
+Why the Error Happens
+
+Example in your Blade view:
+
+<h2>{{ $post->title }}</h2>
+<p>{{ $post->content }}</p>
+
+But in your controller you returned:
+
+return view('post');
+
+Since $post was not passed, Laravel shows:
+
+Undefined variable $post
+
+
+
+2.Correct Controller Code
+
+Open your controller (example: PostController.php)
+
+use App\Models\Post;
+
+public function show($id)
+{
+    $post = Post::find($id);
+
+    return view('post', compact('post'));
+}
+
+Now $post is passed to the view.
+
+
+
+3.Route Example
+
+Check your route in routes/web.php
+
+Route::get('/post/{id}', [PostController::class, 'show']);
+
+
+
+4. Blade View Example
+
+Your view file:
+
+resources/views/post.blade.php
+<h2>{{ $post->title }}</h2>
+
+<p>{{ $post->content }}</p>
+
+Now Laravel knows what $post is.
+
+5. If Error Happens Inside Loop
+
+Sometimes the error happens because of a wrong variable name.
+
+Wrong:
+
+@foreach($posts as $p)
+
+<h2>{{ $post->title }}</h2>
+
+@endforeach
+
+Correct:
+
+@foreach($posts as $post)
+
+<h2>{{ $post->title }}</h2>
+
+@endforeach
+
+
+
+6. Safe Method (Avoid Error)
+
+You can also check if $post exists.
+
+@if(isset($post))
+
+<h2>{{ $post->title }}</h2>
+
+@endif
+
+
+
+7. Example Working Flow
+
+
+Controller:
+
+public function show($id)
+{
+    $post = Post::with('comments')->findOrFail($id);
+
+    return view('posts.show', compact('post'));
+}
+
+Blade:
+
+<h1>{{ $post->title }}</h1>
+
+<p>{{ $post->content }}</p>
+
+<h3>Comments</h3>
+
+@foreach($post->comments as $comment)
+
+<p>{{ $comment->comment }}</p>
+
+@endforeach
