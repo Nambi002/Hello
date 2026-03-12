@@ -1,0 +1,463 @@
+Nambivelnadhan, for your **Laravel Blog project User Interface**, you mainly need **two pages**:
+
+1️⃣ **Home / Index Page** → List all posts
+2️⃣ **Post Detail Page** → Show post + comments + comment form
+
+These belong to the **User Side (Public Interface)**.
+
+Location:
+
+```text
+resources/views/site/
+```
+
+Files:
+
+```text
+site
+│
+├── index.blade.php
+└── post-detail.blade.php
+```
+
+---
+
+# 1️⃣ User Home / Index Page
+
+📄 `resources/views/site/index.blade.php`
+
+This page shows:
+
+* Post Date
+* Post Title
+* Category
+* Comment Count
+* Short Description
+* Sidebar (Categories + Archives)
+
+```php
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container mt-4">
+
+<div class="row">
+
+<!-- Blog Posts -->
+
+<div class="col-md-8">
+
+@foreach($posts as $post)
+
+<div class="card mb-4">
+
+<div class="card-body">
+
+<h4>
+<a href="/post/{{$post->id}}">
+{{$post->title}}
+</a>
+</h4>
+
+<p>
+
+<i class="fa fa-calendar"></i>
+
+{{$post->created_at->format('d M Y')}}
+
+|
+
+<i class="fa fa-folder"></i>
+
+{{$post->category->name}}
+
+|
+
+<i class="fa fa-comments"></i>
+
+{{$post->comments->count()}} Comments
+
+</p>
+
+<p>
+
+{{ Str::limit($post->description,150) }}
+
+</p>
+
+<a href="/post/{{$post->id}}" class="btn btn-primary">
+
+Read More
+
+</a>
+
+</div>
+
+</div>
+
+@endforeach
+
+</div>
+
+<!-- Sidebar -->
+
+<div class="col-md-4">
+
+<!-- Categories -->
+
+<div class="card mb-4">
+
+<div class="card-header">
+
+Categories
+
+</div>
+
+<div class="card-body">
+
+<ul>
+
+@foreach($categories as $category)
+
+<li>
+
+<a href="/category/{{$category->id}}">
+
+{{$category->name}}
+
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+</div>
+
+<!-- Archive -->
+
+<div class="card">
+
+<div class="card-header">
+
+Archives
+
+</div>
+
+<div class="card-body">
+
+<ul>
+
+@foreach($archives as $archive)
+
+<li>
+
+<a href="/archive/{{$archive->month}}/{{$archive->year}}">
+
+{{$archive->month}} {{$archive->year}}
+
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+```
+
+---
+
+# 2️⃣ Post Detail Page
+
+📄 `resources/views/site/post-detail.blade.php`
+
+Shows:
+
+* Post Title
+* Full Description
+* Comments
+* Add Comment Form
+
+```php
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container mt-4">
+
+<div class="row">
+
+<div class="col-md-8">
+
+<!-- Post -->
+
+<div class="card mb-4">
+
+<div class="card-body">
+
+<h2>{{$post->title}}</h2>
+
+<p>
+
+<i class="fa fa-calendar"></i>
+
+{{$post->created_at->format('d M Y')}}
+
+|
+
+<i class="fa fa-folder"></i>
+
+{{$post->category->name}}
+
+</p>
+
+<p>
+
+{{$post->description}}
+
+</p>
+
+</div>
+
+</div>
+
+<!-- Comments -->
+
+<div class="card mb-4">
+
+<div class="card-header">
+
+Comments ({{$post->comments->count()}})
+
+</div>
+
+<div class="card-body">
+
+@foreach($post->comments as $comment)
+
+<div class="mb-3">
+
+<strong>{{$comment->user->name}}</strong>
+
+<p>{{$comment->comment}}</p>
+
+</div>
+
+@endforeach
+
+</div>
+
+</div>
+
+<!-- Add Comment -->
+
+@if(auth()->check())
+
+<div class="card">
+
+<div class="card-header">
+
+Add Comment
+
+</div>
+
+<div class="card-body">
+
+<form action="/comment/store" method="POST">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{$post->id}}">
+
+<div class="mb-3">
+
+<textarea name="comment"
+class="form-control"
+required></textarea>
+
+</div>
+
+<button class="btn btn-primary">
+
+Submit
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+@else
+
+<p>
+
+Please <a href="/login">login</a> to comment.
+
+</p>
+
+@endif
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+```
+
+---
+
+# 3️⃣ Layout for User Side
+
+📄 `resources/views/layouts/app.blade.php`
+
+```html
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Laravel Blog</title>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+
+a:hover{
+color:red;
+text-decoration:none;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+
+<div class="container">
+
+<a class="navbar-brand" href="/">
+
+Laravel Blog
+
+</a>
+
+</div>
+
+</nav>
+
+@yield('content')
+
+</body>
+
+</html>
+```
+
+---
+
+# 4️⃣ Site Controller
+
+📄 `app/Http/Controllers/SiteController.php`
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Post;
+use App\Models\Category;
+
+class SiteController extends Controller
+{
+
+public function index()
+{
+
+$posts = Post::with('category','comments')
+->latest()
+->get();
+
+$categories = Category::all();
+
+$archives = Post::selectRaw('MONTH(created_at) month,
+YEAR(created_at) year')
+->groupBy('month','year')
+->get();
+
+return view('site.index',
+compact('posts','categories','archives'));
+
+}
+
+public function show($id)
+{
+
+$post = Post::with('comments.user','category')
+->findOrFail($id);
+
+return view('site.post-detail',
+compact('post'));
+
+}
+
+}
+```
+
+---
+
+# 5️⃣ Routes
+
+📄 `routes/web.php`
+
+```php
+use App\Http\Controllers\SiteController;
+
+Route::get('/',[SiteController::class,'index']);
+
+Route::get('/post/{id}',
+[SiteController::class,'show']);
+```
+
+---
+
+# ✔ This completes the **User Interface**
+
+| Requirement        | Completed |
+| ------------------ | --------- |
+| Post list page     | ✔         |
+| Post detail page   | ✔         |
+| Comments display   | ✔         |
+| Add comment form   | ✔         |
+| Categories sidebar | ✔         |
+| Archive sidebar    | ✔         |
+| Hover link style   | ✔         |
+
+---
+
+💡 If you want, I can also give you a **complete final Laravel Blog Project Structure + Working Flow diagram**, which will help you **finish the assignment 100% correctly and avoid errors like `$posts undefined` or `user_id null`.**
