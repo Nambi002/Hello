@@ -1,0 +1,331 @@
+Below is a complete simple Laravel Blog UI + logic that will produce the same type of output shown in your screenshots:
+
+Home page with posts
+
+Category sidebar
+
+Archive sidebar
+
+Post detail page
+
+Comments section
+
+Comment form
+
+This is a clean beginner-friendly Laravel implementation.
+
+1️.Database Tables
+
+
+Posts Migration
+Schema::create('posts', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->text('description');
+    $table->unsignedBigInteger('category_id');
+    $table->timestamps();
+});
+Categories Migration
+Schema::create('categories', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->timestamps();
+});
+Comments Migration
+Schema::create('comments', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('post_id');
+    $table->string('name');
+    $table->string('email');
+    $table->string('website')->nullable();
+    $table->text('comment');
+    $table->timestamps();
+});
+
+
+2️. Models
+
+
+Post Model
+
+app/Models/Post.php
+
+class Post extends Model
+{
+    protected $fillable = ['title','description','category_id'];
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+}
+Category Model
+class Category extends Model
+{
+    protected $fillable = ['name'];
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+}
+Comment Model
+class Comment extends Model
+{
+    protected $fillable = [
+        'post_id',
+        'name',
+        'email',
+        'website',
+        'comment'
+    ];
+
+    public function post()
+    {
+        return $this->belongsTo(Post::class);
+    }
+}
+
+
+3️. Controller
+
+
+HomeController
+
+app/Http/Controllers/HomeController.php
+
+use App\Models\Post;
+use App\Models\Category;
+use App\Models\Comment;
+use Illuminate\Http\Request;
+use DB;
+
+class HomeController extends Controller
+{
+
+    public function index()
+    {
+        $posts = Post::latest()->get();
+
+        $categories = Category::all();
+
+        $archives = Post::selectRaw('year(created_at) year, monthname(created_at) month')
+            ->orderByRaw('min(created_at) desc')
+            ->groupBy('year','month')
+            ->get();
+
+        return view('home',compact('posts','categories','archives'));
+    }
+
+
+    public function show($id)
+    {
+        $post = Post::findOrFail($id);
+
+        $categories = Category::all();
+
+        $archives = Post::selectRaw('year(created_at) year, monthname(created_at) month')
+            ->orderByRaw('min(created_at) desc')
+            ->groupBy('year','month')
+            ->get();
+
+        return view('post',compact('post','categories','archives'));
+    }
+
+
+    public function storeComment(Request $request)
+    {
+        Comment::create($request->all());
+
+        return back();
+    }
+
+}
+
+4️. Routes
+
+routes/web.php
+
+use App\Http\Controllers\HomeController;
+
+Route::get('/',[HomeController::class,'index']);
+
+Route::get('/post/{id}',[HomeController::class,'show']);
+
+Route::post('/comment',[HomeController::class,'storeComment']);
+
+
+5️. Home Page UI
+
+resources/views/home.blade.php
+
+<h1>My Blog</h1>
+
+<div style="display:flex">
+
+<div style="width:70%">
+
+@foreach($posts as $post)
+
+<h3>{{$post->title}}</h3>
+
+<p>{{ Str::limit($post->description,150) }}</p>
+
+<p>
+Category : {{$post->category->name}}
+</p>
+
+<p>
+Posted on {{ $post->created_at->format('M d, Y') }}
+</p>
+
+<a href="/post/{{$post->id}}">Read More</a>
+
+<hr>
+
+@endforeach
+
+</div>
+
+
+<div style="width:30%">
+
+<h3>Categories</h3>
+
+@foreach($categories as $category)
+
+<p>{{$category->name}}</p>
+
+@endforeach
+
+
+<h3>Archive</h3>
+
+@foreach($archives as $archive)
+
+<p>{{$archive->month}} {{$archive->year}}</p>
+
+@endforeach
+
+</div>
+
+</div>
+What is this?
+
+
+6️. Post Detail Page
+
+resources/views/post.blade.php
+
+<h2>{{$post->title}}</h2>
+
+<p>{{$post->description}}</p>
+
+<p>
+Category : {{$post->category->name}}
+</p>
+
+<p>
+Posted on {{$post->created_at->format('M d, Y')}}
+</p>
+
+<hr>
+
+<h3>Comments</h3>
+
+@foreach($post->comments as $comment)
+
+<p>
+<strong>{{$comment->name}}</strong>
+<br>
+{{$comment->comment}}
+</p>
+
+<hr>
+
+@endforeach
+
+<h3>Leave a Reply</h3>
+
+<form method="POST" action="/comment">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{$post->id}}">
+
+<input type="text" name="name" placeholder="Name">
+
+<br><br>
+
+<input type="email" name="email" placeholder="Email">
+
+<br><br>
+
+<input type="text" name="website" placeholder="Website">
+
+<br><br>
+
+<textarea name="comment" placeholder="Comment"></textarea>
+
+<br><br>
+
+<button type="submit">Submit Comment</button>
+
+</form>
+What is this?
+
+
+7️. Seeder Example (Optional)
+
+
+Category::create([
+'name'=>'Laravel'
+]);
+
+Post::create([
+'title'=>'My First Post',
+'description'=>'This is blog content',
+'category_id'=>1
+]);
+
+
+Final Output (Same As Your Screenshot)
+
+Home Page:
+
+My Blog
+
+Post Title
+Post description preview...
+Category : Laravel
+Posted on Mar 06, 2026
+Read More
+
+Sidebar
+Categories
+Laravel
+
+Archive
+Mar 2026
+Feb 2026
+
+Post Page:
+
+Post Title
+Full description
+
+Comments
+John
+Nice article
+
+Leave a Reply
+Name
+Email
+Website
+Comment
+Submit
