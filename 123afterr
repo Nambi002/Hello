@@ -1,0 +1,110 @@
+Internal Server Error
+
+Copy as Markdown
+Illuminate\Database\QueryException
+vendor\laravel\framework\src\Illuminate\Database\Connection.php:838
+SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'user_id' cannot be null (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: blog_db, SQL: insert into `posts` (`title`, `description`, `category_id`, `user_id`, `updated_at`, `created_at`) values (post, lorum, 3, ?, 2026-03-12 12:14:39, 2026-03-12 12:14:39))
+
+LARAVEL
+12.53.0
+PHP
+8.2.12
+UNHANDLED
+CODE 23000
+500
+POST
+http://127.0.0.1:8000/admin/posts
+
+Exception trace
+15 vendor frames
+
+Illuminate\Database\Eloquent\Model::__callStatic(string, array)
+app\Http\Controllers\Admin\PostController.php:32
+
+27        return view('admin.posts.create',compact('categories'));
+28    }
+29
+30    public function store(Request $request)
+31    {
+32        Post::create([
+33
+34            'title'=>$request->title,
+35            'description'=>$request->description,
+36            'category_id'=>$request->category_id,
+37            'user_id'=>auth()->id()
+38
+39        ]);
+40
+41        return redirect('/admin/posts')
+42        ->with('success','Post Added Successfully');
+43    }
+44
+47 vendor frames
+
+Illuminate\Foundation\Application->handleRequest(object(Illuminate\Http\Request))
+public\index.php:20
+
+1 vendor frame
+
+Queries
+1-1 of 1
+mysql
+select * from `sessions` where `id` = 'iE57rsTQQ3htnhJHOcrTXcdD2FqTBp4gqThbo8GD' limit 1
+1.69ms
+Headers
+host
+127.0.0.1:8000
+connection
+keep-alive
+content-length
+91
+cache-control
+max-age=0
+sec-ch-ua
+"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+upgrade-insecure-requests
+1
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
+origin
+http://127.0.0.1:8000
+content-type
+application/x-www-form-urlencoded
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+sec-fetch-site
+same-origin
+sec-fetch-mode
+navigate
+sec-fetch-user
+?1
+sec-fetch-dest
+document
+referer
+http://127.0.0.1:8000/admin/posts/create
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8
+cookie
+XSRF-TOKEN=eyJpdiI6InlUT2xsQStFM1BQSDF4VExpb3FzWkE9PSIsInZhbHVlIjoiWmpaUFdWMHN5ME9ZQ3J4MVJlUTlMSlpwYVBuck0rYncwRHRmd29nSnJYZDlTUVlyUVljTVFYR1ByVC8vNjl0SEx3QVErSDNwZVFvaGZ1SSsxdkhDREdJVW14SWd4bnVGdy9ndVVrSUVodWF5NUNvMURjU2syUElwU3ZaUjJDcTciLCJtYWMiOiI0YmQ3OGQwNWZlZWU5ZWQyZWZjOGQ3OTBmODRkMDliODdiYjYwMWYzMTU5ODkxMzVlYTY4NGNjMjdlNTdhZGJhIiwidGFnIjoiIn0%3D; laravel-session=eyJpdiI6Indtd2hLbmkzNG5HNCsveS9UZkxERXc9PSIsInZhbHVlIjoiUmpEdDBoUXdxNzRmVTFNRkNVTmtyWlhnVjdEYmt1aENXYlBjNk0xYVFMbkptL3N4aXdZTjRCVW9pT3l2T2J5b1RpWXJLbmhQNHZnUmxzVWlKRkVMREk4S2NxcU5JM2lyRW13THVYcWUyMUpDMCtOb0M2dHZQRFlHRlgzNDhzN3EiLCJtYWMiOiI5OWVmNzVlYWU3MWNkNjgzZmExN2U1OGVjMTM4YTk5NjJlNzgyYzQyYzNlZjRjYWY3MDA0N2Q0YjZmZmZkNTUwIiwidGFnIjoiIn0%3D
+Body
+{
+    "_token": "yGPgWrW3TSvUrYAeLS7bp4QjEE7pX5VCv1XQlCzG",
+    "title": "post",
+    "description": "lorum",
+    "category_id": "3"
+}
+Routing
+controller
+App\Http\Controllers\Admin\PostController@store
+route name
+posts.store
+middleware
+web
+Routing parameters
+// No routing parameters
