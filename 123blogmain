@@ -1,0 +1,416 @@
+Fix Dashboard Error (Important)
+
+Problem you said:
+
+$posts not displaying
+
+$comments not displaying
+
+$categories showing JSON format
+
+Cause
+
+In controller you probably passed collection instead of count.
+
+Example (wrong):
+
+$posts = Post::all();
+$categories = Category::all();
+$comments = Comment::all();
+Correct way
+
+Open:
+
+app/Http/Controllers/Admin/DashboardController.php
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Post;
+use App\Models\Category;
+use App\Models\Comment;
+
+class DashboardController extends Controller
+{
+
+    public function index()
+    {
+
+        $posts = Post::count();
+        $categories = Category::count();
+        $comments = Comment::count();
+
+        return view('admin.dashboard', compact('posts','categories','comments'));
+    }
+
+}
+
+Now dashboard will show numbers not JSON.
+
+Example output:
+
+Total Posts       5
+Total Categories  3
+Total Comments    8
+
+
+2️. PostController (Admin)
+
+Create:
+
+app/Http/Controllers/Admin/PostController.php
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Post;
+use App\Models\Category;
+
+class PostController extends Controller
+{
+
+    public function index()
+    {
+        $posts = Post::with('category')->get();
+        return view('admin.posts.index', compact('posts'));
+    }
+
+    public function create()
+    {
+        $categories = Category::all();
+        return view('admin.posts.create', compact('categories'));
+    }
+
+    public function store(Request $request)
+    {
+
+        Post::create([
+            'title'=>$request->title,
+            'description'=>$request->description,
+            'category_id'=>$request->category_id,
+            'user_id'=>auth()->id()
+        ]);
+
+        return redirect('/admin/posts')->with('success','Post Created');
+    }
+
+    public function edit($id)
+    {
+
+        $post = Post::find($id);
+        $categories = Category::all();
+
+        return view('admin.posts.edit', compact('post','categories'));
+    }
+
+    public function update(Request $request,$id)
+    {
+
+        $post = Post::find($id);
+
+        $post->update([
+            'title'=>$request->title,
+            'description'=>$request->description,
+            'category_id'=>$request->category_id
+        ]);
+
+        return redirect('/admin/posts')->with('success','Post Updated');
+    }
+
+    public function destroy($id)
+    {
+        Post::destroy($id);
+        return redirect('/admin/posts')->with('success','Post Deleted');
+    }
+
+}
+
+3️.Category Edit Page
+
+Create:
+
+resources/views/admin/categories/edit.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Edit Category</h3>
+
+<form method="POST" action="/admin/categories/{{$category->id}}">
+
+@csrf
+@method('PUT')
+
+<div class="mb-3">
+
+<label>Category Name</label>
+
+<input type="text" name="name" class="form-control"
+value="{{$category->name}}">
+
+</div>
+
+<button class="btn btn-primary">Update</button>
+
+</form>
+
+@endsection
+
+
+4️. Post Index Page
+
+Create:
+
+resources/views/admin/posts/index.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Posts</h3>
+
+<a href="/admin/posts/create" class="btn btn-primary mb-3">Add Post</a>
+
+@if(session('success'))
+<div class="alert alert-success">
+{{session('success')}}
+</div>
+@endif
+
+<table class="table table-bordered">
+
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Category</th>
+<th>Action</th>
+</tr>
+
+@foreach($posts as $post)
+
+<tr>
+
+<td>{{$post->id}}</td>
+
+<td>{{$post->title}}</td>
+
+<td>{{$post->category->name}}</td>
+
+<td>
+
+<a href="/admin/posts/{{$post->id}}/edit" class="btn btn-warning">Edit</a>
+
+<form action="/admin/posts/{{$post->id}}" method="POST">
+
+@csrf
+@method('DELETE')
+
+<button class="btn btn-danger">Delete</button>
+
+</form>
+
+</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+
+
+5️. Post Create Page
+
+
+resources/views/admin/posts/create.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Add Post</h3>
+
+<form method="POST" action="/admin/posts">
+
+@csrf
+
+<div class="mb-3">
+
+<label>Title</label>
+<input type="text" name="title" class="form-control">
+
+</div>
+
+<div class="mb-3">
+
+<label>Description</label>
+<textarea name="description" class="form-control"></textarea>
+
+</div>
+
+<div class="mb-3">
+
+<label>Category</label>
+
+<select name="category_id" class="form-control">
+
+@foreach($categories as $category)
+
+<option value="{{$category->id}}">
+{{$category->name}}
+</option>
+
+@endforeach
+
+</select>
+
+</div>
+
+<button class="btn btn-success">Save</button>
+
+</form>
+
+@endsection
+
+
+6️.Post Edit Page
+
+
+resources/views/admin/posts/edit.blade.php
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Edit Post</h3>
+
+<form method="POST" action="/admin/posts/{{$post->id}}">
+
+@csrf
+@method('PUT')
+
+<div class="mb-3">
+
+<label>Title</label>
+
+<input type="text" name="title"
+class="form-control"
+value="{{$post->title}}">
+
+</div>
+
+<div class="mb-3">
+
+<label>Description</label>
+
+<textarea name="description"
+class="form-control">{{$post->description}}</textarea>
+
+</div>
+
+<div class="mb-3">
+
+<label>Category</label>
+
+<select name="category_id" class="form-control">
+
+@foreach($categories as $category)
+
+<option value="{{$category->id}}"
+@if($post->category_id == $category->id) selected @endif>
+
+{{$category->name}}
+
+</option>
+
+@endforeach
+
+</select>
+
+</div>
+
+<button class="btn btn-primary">Update</button>
+
+</form>
+
+@endsection
+
+
+7️. Site Home Page
+
+
+resources/views/site/home.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h3>Blog Posts</h3>
+
+@foreach($posts as $post)
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h4>
+
+<a href="/post/{{$post->id}}">
+{{$post->title}}
+</a>
+
+</h4>
+
+<p>{{$post->description}}</p>
+
+<p>
+Category :
+{{$post->category->name}}
+</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+@endsection
+
+
+8️.Post Detail Page
+
+
+resources/views/site/post.blade.php
+@extends('layouts.app')
+
+@section('content')
+
+<h2>{{$post->title}}</h2>
+
+<p>
+Category :
+{{$post->category->name}}
+</p>
+
+<p>{{$post->description}}</p>
+
+<hr>
+
+<h4>Comments</h4>
+
+@foreach($post->comments as $comment)
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+{{$comment->comment}}
+
+</div>
+
+</div>
+
+@endforeach
+
+@endsection
