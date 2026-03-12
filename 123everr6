@@ -1,0 +1,412 @@
+Nambivelnadhan, the error is very clear from the message:
+
+> **SQLSTATE[23000]: Column `user_id` cannot be null**
+
+This means **Laravel is trying to insert a post but `user_id` is empty**.
+
+Your controller code:
+
+```php
+'user_id' => auth()->id()
+```
+
+But **auth()->id() is returning NULL**.
+
+That means **no user is logged in** when creating the post.
+
+---
+
+# 🔍 Why This Happens
+
+Your route probably looks like this:
+
+```php
+Route::resource('/admin/posts', PostController::class);
+```
+
+But **it is not protected by authentication middleware**.
+
+So Laravel cannot detect the logged-in user.
+
+---
+
+# ✅ Solution 1 (Best Solution)
+
+Protect admin routes using **auth middleware**.
+
+Open:
+
+```
+routes/web.php
+```
+
+Change to:
+
+```php
+use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DashboardController;
+
+Route::middleware(['auth'])->prefix('admin')->group(function () {
+
+    Route::get('/dashboard',[DashboardController::class,'index']);
+
+    Route::resource('/categories', CategoryController::class);
+
+    Route::resource('/posts', PostController::class);
+
+});
+```
+
+Now **only logged-in users can create posts**.
+
+---
+
+# ✅ Solution 2 (Login Before Creating Post)
+
+Login using your seeded admin account:
+
+```
+email: admin@gmail.com
+password: 123456
+```
+
+Then create a post.
+
+Now `auth()->id()` will return:
+
+```
+1
+```
+
+So the database insert becomes:
+
+```sql
+insert into posts
+(title,description,category_id,user_id)
+values
+(post,lorum,3,1)
+```
+
+✔ No error.
+
+---
+
+# ✅ Solution 3 (Safer Controller Code)
+
+Update your controller store method:
+
+📄 `PostController.php`
+
+```php
+public function store(Request $request)
+{
+    if(!auth()->check()){
+        return redirect('/login');
+    }
+
+    Post::create([
+        'title'=>$request->title,
+        'description'=>$request->description,
+        'category_id'=>$request->category_id,
+        'user_id'=>auth()->id()
+    ]);
+
+    return redirect('/admin/posts')
+    ->with('success','Post Added Successfully');
+}
+```
+
+---
+
+# ✅ Check Your Model Fillable
+
+📄 `Post.php`
+
+```php
+protected $fillable = [
+    'title',
+    'description',
+    'category_id',
+    'user_id'
+];
+```
+
+If `user_id` is missing here → Laravel will ignore it.
+
+---
+
+# ✔ Final Working Flow
+
+```
+Login Admin
+      ↓
+Admin Dashboard
+      ↓
+Create Post
+      ↓
+auth()->id() = 1
+      ↓
+Insert Post
+```
+
+---
+
+# ⭐ Pro Tip (Important for Laravel Beginners)
+
+Instead of:
+
+```php
+'user_id'=>auth()->id()
+```
+
+You can write cleaner code:
+
+```php
+auth()->user()->posts()->create([
+'title'=>$request->title,
+'description'=>$request->description,
+'category_id'=>$request->category_id
+]);
+```
+
+Laravel automatically inserts **user_id**.
+
+---
+
+✅ If you want, send your **PostController + routes/web.php**, and I will fix them so your **blog project runs without any errors**.
+
+
+
+
+Nambivelnadhan, if **`auth()->id()` returns `null`**, it means **Laravel does not detect a logged-in user**. That is why `user_id` becomes NULL and the insert fails.
+
+We will fix this step-by-step.
+
+---
+
+# 1️⃣ First Confirm Login System Works
+
+Open in browser:
+
+```
+http://127.0.0.1:8000/login
+```
+
+Login using your admin user.
+
+Example you created earlier:
+
+```
+Email: admin@gmail.com
+Password: 123456
+```
+
+After login Laravel should redirect to **/dashboard** or home.
+
+Now go to:
+
+```
+http://127.0.0.1:8000/admin/posts/create
+```
+
+Then try saving the post.
+
+---
+
+# 2️⃣ Protect Admin Routes With Auth Middleware
+
+Open:
+
+```
+routes/web.php
+```
+
+Use this structure:
+
+```php
+use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DashboardController;
+
+Route::middleware(['auth'])->prefix('admin')->group(function () {
+
+    Route::get('/dashboard',[DashboardController::class,'index']);
+
+    Route::resource('/categories',CategoryController::class);
+
+    Route::resource('/posts',PostController::class);
+
+});
+```
+
+This ensures **only logged-in users can access admin pages**.
+
+---
+
+# 3️⃣ Check If Login Session Exists
+
+Temporarily test inside controller.
+
+Open:
+
+```
+PostController.php
+```
+
+Inside `store()`:
+
+```php
+dd(auth()->user());
+```
+
+Example:
+
+```php
+public function store(Request $request)
+{
+    dd(auth()->user());
+}
+```
+
+Result should look like:
+
+```
+User {
+  id: 1,
+  name: "Admin",
+  email: "admin@gmail.com"
+}
+```
+
+If it shows:
+
+```
+null
+```
+
+Then **login session is not active**.
+
+---
+
+# 4️⃣ Check Your Login Guard
+
+Open:
+
+```
+config/auth.php
+```
+
+Default guard must be:
+
+```php
+'defaults' => [
+    'guard' => 'web',
+    'passwords' => 'users',
+],
+```
+
+And:
+
+```php
+'guards' => [
+    'web' => [
+        'driver' => 'session',
+        'provider' => 'users',
+    ],
+],
+```
+
+---
+
+# 5️⃣ Make Sure Session Table Exists
+
+Run:
+
+```
+php artisan session:table
+php artisan migrate
+```
+
+Laravel sometimes needs session table.
+
+---
+
+# 6️⃣ Clear Laravel Cache
+
+Run:
+
+```
+php artisan config:clear
+php artisan route:clear
+php artisan cache:clear
+```
+
+Restart server:
+
+```
+php artisan serve
+```
+
+---
+
+# 7️⃣ Correct Final Controller Code
+
+After login works, use:
+
+```php
+public function store(Request $request)
+{
+    Post::create([
+        'title'=>$request->title,
+        'description'=>$request->description,
+        'category_id'=>$request->category_id,
+        'user_id'=>auth()->user()->id
+    ]);
+
+    return redirect('/admin/posts')
+    ->with('success','Post Added Successfully');
+}
+```
+
+---
+
+# 8️⃣ Verify Post Model
+
+Open:
+
+```
+app/Models/Post.php
+```
+
+Ensure:
+
+```php
+protected $fillable = [
+    'title',
+    'description',
+    'category_id',
+    'user_id'
+];
+```
+
+---
+
+# ✔ After Fix
+
+Flow becomes:
+
+```
+Login Admin
+     ↓
+auth()->id() = 1
+     ↓
+Create Post
+     ↓
+user_id inserted correctly
+```
+
+---
+
+✅ If you want, send me your **routes/web.php** and **PostController.php**.
+I can immediately **find the exact mistake causing `auth()->id()` to return null**.
