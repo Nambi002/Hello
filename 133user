@@ -1,0 +1,1022 @@
+---------------------------------------
+user
+---------------------------------------
+Frontend Routes
+
+Open:
+
+routes/web.php
+
+Add:
+
+use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\CommentController;
+
+Route::get('/', [FrontendController::class,'index'])->name('home');
+
+Route::get('/post/{id}', [FrontendController::class,'show'])->name('post.show');
+
+Route::get('/category/{id}', [FrontendController::class,'category'])->name('category.posts');
+
+Route::get('/archive/{month}/{year}', [FrontendController::class,'archive'])->name('archive.posts');
+
+Route::post('/comment/store', [CommentController::class,'store'])->name('comment.store');
+2️⃣ Frontend Controller
+
+Create controller
+
+php artisan make:controller FrontendController
+
+Open
+
+app/Http/Controllers/FrontendController.php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Post;
+use App\Models\Category;
+use App\Models\Comment;
+use Carbon\Carbon;
+
+class FrontendController extends Controller
+{
+
+    public function index()
+    {
+
+        $posts = Post::with('category','comments')
+                ->latest()
+                ->get();
+
+        $categories = Category::all();
+
+        $archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+                ->orderBy('created_at','desc')
+                ->distinct()
+                ->get();
+
+        return view('site.index',compact('posts','categories','archives'));
+    }
+
+
+    public function show($id)
+    {
+
+        $post = Post::with('comments','category')->findOrFail($id);
+
+        $categories = Category::all();
+
+        $archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+                ->orderBy('created_at','desc')
+                ->distinct()
+                ->get();
+
+        return view('site.show',compact('post','categories','archives'));
+    }
+
+
+
+    public function category($id)
+    {
+
+        $posts = Post::where('category_id',$id)->get();
+
+        $categories = Category::all();
+
+        $archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+                ->distinct()
+                ->get();
+
+        return view('site.index',compact('posts','categories','archives'));
+    }
+
+
+
+    public function archive($month,$year)
+    {
+
+        $posts = Post::whereMonth('created_at',date('m',strtotime($month)))
+                ->whereYear('created_at',$year)
+                ->get();
+
+        $categories = Category::all();
+
+        $archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+                ->distinct()
+                ->get();
+
+        return view('site.index',compact('posts','categories','archives'));
+    }
+
+}
+3️⃣ Comment Controller
+
+Create
+
+php artisan make:controller CommentController
+
+Open
+
+app/Http/Controllers/CommentController.php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Comment;
+
+class CommentController extends Controller
+{
+
+    public function store(Request $request)
+    {
+
+        $request->validate([
+            'name'=>'required',
+            'email'=>'required',
+            'comment'=>'required'
+        ]);
+
+        Comment::create([
+            'post_id'=>$request->post_id,
+            'name'=>$request->name,
+            'email'=>$request->email,
+            'website'=>$request->website,
+            'comment'=>$request->comment
+        ]);
+
+        return back()->with('success','Comment Added');
+    }
+
+}
+4️⃣ Layout File
+
+Create folder
+
+resources/views/layouts
+
+Create file
+
+layouts/site.blade.php
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Blog</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-light bg-light">
+<div class="container">
+
+<a class="navbar-brand">Blog</a>
+
+<div>
+<a href="#" class="btn btn-primary">Login</a>
+<a href="#" class="btn btn-success">Sign up</a>
+</div>
+
+</div>
+</nav>
+
+<div class="container mt-4">
+
+<div class="row">
+
+<div class="col-md-8">
+
+@yield('content')
+
+</div>
+
+<div class="col-md-4">
+
+@include('site.sidebar')
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>
+What is this?
+5️⃣ Sidebar (Categories + Archive)
+
+Create
+
+resources/views/site/sidebar.blade.php
+<div class="card mb-3">
+
+<div class="card-header bg-dark text-white">
+Categories
+</div>
+
+<ul class="list-group list-group-flush">
+
+@foreach($categories as $cat)
+
+<li class="list-group-item">
+
+<a href="{{ route('category.posts',$cat->id) }}">
+{{ $cat->name }}
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+
+
+<div class="card">
+
+<div class="card-header bg-dark text-white">
+Archive
+</div>
+
+<ul class="list-group list-group-flush">
+
+@foreach($archives as $arch)
+
+<li class="list-group-item">
+
+<a href="{{ route('archive.posts',[$arch->month,$arch->year]) }}">
+{{ $arch->month }} - {{ $arch->year }}
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
+
+</div>
+What is this?
+6️⃣ Blog List Page
+
+Create
+
+resources/views/site/index.blade.php
+@extends('layouts.site')
+
+@section('content')
+
+@foreach($posts as $post)
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h4>
+
+<a href="{{ route('post.show',$post->id) }}">
+
+{{ $post->title }}
+
+</a>
+
+</h4>
+
+<p>
+
+{{ Str::limit($post->description,120) }}
+
+</p>
+
+<span class="badge bg-secondary">
+
+{{ $post->category->name }}
+
+</span>
+
+<p class="mt-2">
+
+Posted on {{ $post->created_at->format('M d, Y') }}
+
+</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+@endsection
+What is this?
+7️⃣ Blog Detail Page
+
+Create
+
+resources/views/site/show.blade.php
+@extends('layouts.site')
+
+@section('content')
+
+<h3>{{ $post->title }}</h3>
+
+<p>
+
+{{ $post->description }}
+
+</p>
+
+<hr>
+
+<h5>{{ $post->comments->count() }} Responses</h5>
+
+@foreach($post->comments as $comment)
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+<b>{{ $comment->name }}</b>
+
+<p>{{ $comment->comment }}</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+
+<hr>
+
+<h4>Leave a reply</h4>
+
+<form action="{{ route('comment.store') }}" method="POST">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{ $post->id }}">
+
+<input type="text" name="name" placeholder="Enter name" class="form-control mb-2">
+
+<input type="email" name="email" placeholder="Enter email" class="form-control mb-2">
+
+<input type="text" name="website" placeholder="Enter website" class="form-control mb-2">
+
+<textarea name="comment" class="form-control mb-2"></textarea>
+
+<button class="btn btn-primary">
+Submit Comment
+</button>
+
+</form>
+
+@endsection
+What is this?
+8️⃣ Comment Model
+php artisan make:model Comment
+app/Models/Comment.php
+protected $fillable = [
+
+'post_id',
+'name',
+'email',
+'website',
+'comment'
+
+];
+9️⃣ Post Model Relationship
+
+Open
+
+Post.php
+
+Add
+
+public function comments()
+{
+    return $this->hasMany(Comment::class);
+}
+
+public function category()
+{
+    return $this->belongsTo(Category::class);
+}
+🔟 Comment Model Relationship
+Comment.php
+public function post()
+{
+    return $this->belongsTo(Post::class);
+}
+
+
+---------------------------------------
+view site
+---------------------------------------
+Migration – create_comments_table.php
+
+Location:
+
+database/migrations/xxxx_xx_xx_create_comments_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('comments', function (Blueprint $table) {
+
+            $table->id();
+
+            $table->unsignedBigInteger('post_id');
+
+            $table->string('name');
+
+            $table->string('email');
+
+            $table->string('website')->nullable();
+
+            $table->text('comment');
+
+            $table->timestamps();
+
+            $table->foreign('post_id')
+                  ->references('id')
+                  ->on('posts')
+                  ->onDelete('cascade');
+
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('comments');
+    }
+};
+
+Run migration:
+
+php artisan migrate
+2️⃣ Comment Model
+
+Location:
+
+app/Models/Comment.php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Comment extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+
+        'post_id',
+        'name',
+        'email',
+        'website',
+        'comment'
+
+    ];
+
+    public function post()
+    {
+        return $this->belongsTo(Post::class);
+    }
+}
+3️⃣ Post Model Relationship
+
+Location:
+
+app/Models/Post.php
+
+Add this:
+
+public function comments()
+{
+    return $this->hasMany(Comment::class);
+}
+
+Your post can now fetch comments like:
+
+$post->comments
+4️⃣ Comment Controller
+
+Create controller
+
+php artisan make:controller CommentController
+
+Location:
+
+app/Http/Controllers/CommentController.php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Comment;
+
+class CommentController extends Controller
+{
+
+    public function store(Request $request)
+    {
+
+        $request->validate([
+
+            'name' => 'required',
+            'email' => 'required|email',
+            'comment' => 'required'
+
+        ]);
+
+        Comment::create([
+
+            'post_id' => $request->post_id,
+            'name' => $request->name,
+            'email' => $request->email,
+            'website' => $request->website,
+            'comment' => $request->comment
+
+        ]);
+
+        return back()->with('success','Comment added successfully');
+    }
+
+}
+5️⃣ Routes
+
+Location:
+
+routes/web.php
+
+Add:
+
+use App\Http\Controllers\CommentController;
+
+Route::post('/comment/store',[CommentController::class,'store'])->name('comment.store');
+6️⃣ Blog Detail Page (Show Comments + Form)
+
+Location:
+
+resources/views/site/show.blade.php
+@extends('layouts.site')
+
+@section('content')
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h3>{{ $post->title }}</h3>
+
+<p>
+
+{{ $post->description }}
+
+</p>
+
+<p>
+
+Posted on {{ $post->created_at->format('M d, Y') }}
+
+</p>
+
+</div>
+
+</div>
+
+<hr>
+
+<h4>{{ $post->comments->count() }} Responses</h4>
+
+@foreach($post->comments as $comment)
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+<b>{{ $comment->name }}</b>
+
+<br>
+
+<small>
+
+{{ $comment->created_at->format('M d, Y') }}
+
+</small>
+
+<p>
+
+{{ $comment->comment }}
+
+</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+<hr>
+
+<h4>Leave a reply</h4>
+
+<form action="{{ route('comment.store') }}" method="POST">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{ $post->id }}">
+
+<div class="mb-2">
+
+<input type="text"
+name="name"
+class="form-control"
+placeholder="Enter name">
+
+</div>
+
+<div class="mb-2">
+
+<input type="email"
+name="email"
+class="form-control"
+placeholder="Enter email">
+
+</div>
+
+<div class="mb-2">
+
+<input type="text"
+name="website"
+class="form-control"
+placeholder="Enter website">
+
+</div>
+
+<div class="mb-2">
+
+<textarea
+name="comment"
+class="form-control"
+placeholder="Enter comment"></textarea>
+
+</div>
+
+<button class="btn btn-primary">
+Submit Comment
+</button>
+
+</form>
+
+@endsection
+What is this?
+7️⃣ Show Comment Count in Post List
+
+Location:
+
+resources/views/site/index.blade.php
+
+Add:
+
+<p>
+
+Comments: {{ $post->comments->count() }}
+
+</p>
+What is this?
+
+Example output:
+
+A post in test-post123
+
+new-posts
+
+Comments: 2
+
+Posted on Mar 06, 2026
+8️⃣ Database Example
+posts table
+id	title
+1	test-post123
+comments table
+id	post_id	name	comment
+1	1	test	test comment
+9️⃣ Comment Flow
+
+User opens:
+
+Post Detail Page
+
+↓
+
+Reads comments
+
+↓
+
+Fill comment form
+
+↓
+
+Submit
+
+↓
+
+Saved to comments table
+
+↓
+
+Displayed immediately
+🔟 Folder Structure (Important for Review)
+app
+ ├── Models
+ │      Comment.php
+ │      Post.php
+
+app
+ ├── Http
+ │     ├── Controllers
+ │            CommentController.php
+
+database
+ ├── migrations
+ │        create_comments_table.php
+
+resources
+ ├── views
+ │      ├── site
+ │            show.blade.php
+ │            index.blade.php
+
+routes
+ ├── web.php
+
+---------------------------------------
+$posts
+---------------------------------------
+
+Why $posts Undefined Variable Happens
+
+Example controller:
+
+return view('admin.dashboard', compact('categories'));
+
+Here only $categories is sent, so:
+
+$categories → works
+$posts → undefined
+$comments → undefined
+✅ Solution (Controller Fix)
+
+Open your Dashboard Controller
+
+app/Http/Controllers/Admin/DashboardController.php
+
+Example correct code:
+
+use App\Models\Post;
+use App\Models\Category;
+use App\Models\Comment;
+
+public function index()
+{
+    $posts = Post::count();
+    $categories = Category::count();
+    $comments = Comment::count();
+
+    return view('admin.dashboard', compact(
+        'posts',
+        'categories',
+        'comments'
+    ));
+}
+
+Now Laravel sends:
+
+$posts
+$categories
+$comments
+
+to the dashboard.
+
+✅ dashboard.blade.php Example
+resources/views/admin/dashboard.blade.php
+<h2>Dashboard</h2>
+
+<div class="row">
+
+<div class="col-md-4">
+<div class="card bg-primary text-white">
+<div class="card-body">
+<h4>Total Posts</h4>
+<h3>{{ $posts }}</h3>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card bg-success text-white">
+<div class="card-body">
+<h4>Total Categories</h4>
+<h3>{{ $categories }}</h3>
+</div>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="card bg-warning text-white">
+<div class="card-body">
+<h4>Total Comments</h4>
+<h3>{{ $comments }}</h3>
+</div>
+</div>
+</div>
+
+</div>
+What is this?
+🔎 Another Common Mistake
+
+Sometimes developers write:
+
+$posts = Post::all();
+
+but use in blade:
+
+{{ $posts->count() }}
+
+Better:
+
+$posts = Post::count();
+⚡ Quick Debug Trick
+
+Inside blade write:
+
+{{ dd($posts) }}
+
+If error appears → controller didn't send variable.
+
+✅ Correct Flow
+Controller
+   ↓
+Fetch data
+   ↓
+Send using compact()
+   ↓
+Blade receives variables
+   ↓
+Display in dashboard
+💡 Important for Your Blog Review
+
+Your Overview Page should show:
+
+Total Posts
+Total Categories
+Total Comments
+Total Users
+
+Example:
+
+Posts        : 10
+Categories   : 4
+Comments     : 23
+Users        : 2
+
+
+---------------------------------------
+view site
+---------------------------------------
+
+
+
+1️⃣ Make Sure Home Route Exists (User Interface)
+
+Open:
+
+routes/web.php
+
+Make sure you have this route for the public blog page:
+
+use App\Http\Controllers\FrontendController;
+
+Route::get('/', [FrontendController::class,'index'])->name('home');
+
+This route loads your user blog page.
+
+Example URL:
+
+http://127.0.0.1:8000/
+2️⃣ Add "View Site" Button in Admin Layout
+
+Open your admin layout file.
+
+Usually it is:
+
+resources/views/admin/layouts/app.blade.php
+
+or
+
+resources/views/layouts/admin.blade.php
+
+Find the top navbar section.
+
+Example:
+
+<div class="topbar">
+What is this?
+
+Add this button top right.
+
+<a href="{{ route('home') }}" class="btn btn-success" target="_blank">
+    View Site
+</a>
+What is this?
+3️⃣ Full Example Navbar Code
+
+Example:
+
+<nav class="navbar navbar-light bg-light">
+
+<div class="container-fluid">
+
+<h4>Admin Dashboard</h4>
+
+<div>
+
+<a href="{{ route('home') }}" class="btn btn-success" target="_blank">
+View Site
+</a>
+
+<a href="{{ route('logout') }}" class="btn btn-danger">
+Logout
+</a>
+
+</div>
+
+</div>
+
+</nav>
+What is this?
+4️⃣ Result
+
+Admin Panel Top Right:
+
+---------------------------------------
+Admin Dashboard        [View Site] [Logout]
+---------------------------------------
+
+Click View Site
+
+↓
+
+Opens
+
+http://127.0.0.1:8000/
+
+↓
+
+Shows User Blog Page
+
+5️⃣ Optional (Better UI with Icon)
+
+Add FontAwesome icon.
+
+<a href="{{ route('home') }}" class="btn btn-success" target="_blank">
+
+<i class="fa fa-globe"></i> View Site
+
+</a>
+What is this?
+
+Include FontAwesome in layout:
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+What is this?
+6️⃣ Result UI
+Admin Dashboard
+
+[🌍 View Site]   [Logout]
+⚡ Bonus (Professional Feature)
+
+Instead of opening same tab, open new tab.
+
+Already done with:
+
+target="_blank"
+What is this?
+
+So admin can manage dashboard and view site simultaneously.
