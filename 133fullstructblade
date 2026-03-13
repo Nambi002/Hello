@@ -1,0 +1,461 @@
+1️. Folder Structure (All Blade Files)
+
+Inside:
+
+resources/views
+
+Structure:
+
+views
+│
+├── layouts
+│   ├── admin.blade.php
+│   └── site.blade.php
+│
+├── admin
+│   ├── dashboard.blade.php
+│   │
+│   ├── categories
+│   │   ├── index.blade.php
+│   │   ├── create.blade.php
+│   │   └── edit.blade.php
+│   │
+│   ├── posts
+│   │   ├── index.blade.php
+│   │   ├── create.blade.php
+│   │   └── edit.blade.php
+│   │
+│   └── comments
+│       └── index.blade.php
+│
+└── site
+    ├── index.blade.php
+    ├── show.blade.php
+    └── sidebar.blade.php
+
+Total 12 Blade files.
+
+2️. layouts/admin.blade.php
+resources/views/layouts/admin.blade.php
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Admin Panel</title>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+
+<div class="container">
+
+<a class="navbar-brand">Admin Dashboard</a>
+
+<div>
+
+<a href="/" class="btn btn-success">View Site</a>
+
+</div>
+
+</div>
+
+</nav>
+
+<div class="container mt-4">
+
+@yield('content')
+
+</div>
+
+</body>
+</html>
+What is this?
+3️. layouts/site.blade.php
+resources/views/layouts/site.blade.php
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Blog</title>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-light bg-light">
+
+<div class="container">
+
+<a class="navbar-brand">Blog</a>
+
+</div>
+
+</nav>
+
+<div class="container mt-4">
+
+<div class="row">
+
+<div class="col-md-8">
+
+@yield('content')
+
+</div>
+
+<div class="col-md-4">
+
+@include('site.sidebar')
+
+</div>
+
+</div>
+
+</div>
+
+</body>
+
+</html>
+What is this?
+4️. admin/dashboard.blade.php
+resources/views/admin/dashboard.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Dashboard</h2>
+
+<div class="row">
+
+<div class="col-md-4">
+
+<div class="card bg-primary text-white">
+
+<div class="card-body">
+
+<h4>Total Posts</h4>
+
+<h3>{{ $posts }}</h3>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-success text-white">
+
+<div class="card-body">
+
+<h4>Total Categories</h4>
+
+<h3>{{ $categories }}</h3>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-warning text-white">
+
+<div class="card-body">
+
+<h4>Total Comments</h4>
+
+<h3>{{ $comments }}</h3>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+What is this?
+5️. admin/categories/index.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Categories</h2>
+
+<a href="/admin/categories/create" class="btn btn-primary mb-3">
+Add Category
+</a>
+
+<table class="table">
+
+<tr>
+
+<th>ID</th>
+<th>Name</th>
+<th>Action</th>
+
+</tr>
+
+@foreach($categories as $cat)
+
+<tr>
+
+<td>{{ $cat->id }}</td>
+<td>{{ $cat->name }}</td>
+
+<td>
+
+<a href="/admin/categories/{{$cat->id}}/edit"
+class="btn btn-warning">Edit</a>
+
+</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+What is this?
+6️. admin/categories/create.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Add Category</h2>
+
+<form method="POST" action="/admin/categories">
+
+@csrf
+
+<input type="text" name="name" class="form-control mb-2">
+
+<button class="btn btn-success">Save</button>
+
+</form>
+
+@endsection
+What is this?
+7️. admin/categories/edit.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Edit Category</h2>
+
+<form method="POST" action="/admin/categories/{{$category->id}}">
+
+@csrf
+@method('PUT')
+
+<input type="text" name="name"
+value="{{$category->name}}"
+class="form-control mb-2">
+
+<button class="btn btn-success">Update</button>
+
+</form>
+
+@endsection
+What is this?
+8️. admin/posts/index.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Posts</h2>
+
+<a href="/admin/posts/create" class="btn btn-primary mb-3">
+Add Post
+</a>
+
+<table class="table">
+
+<tr>
+
+<th>Title</th>
+<th>Category</th>
+<th>Comments</th>
+
+</tr>
+
+@foreach($posts as $post)
+
+<tr>
+
+<td>{{ $post->title }}</td>
+
+<td>{{ $post->category->name }}</td>
+
+<td>{{ $post->comments->count() }}</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+What is this?
+9️. admin/posts/create.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Add Post</h2>
+
+<form method="POST" action="/admin/posts">
+
+@csrf
+
+<input type="text"
+name="title"
+placeholder="Title"
+class="form-control mb-2">
+
+<textarea
+name="description"
+class="form-control mb-2">
+</textarea>
+
+<button class="btn btn-success">
+Save
+</button>
+
+</form>
+
+@endsection
+What is this?
+10. admin/comments/index.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Comments</h2>
+
+<table class="table">
+
+<tr>
+
+<th>Name</th>
+<th>Comment</th>
+
+</tr>
+
+@foreach($comments as $comment)
+
+<tr>
+
+<td>{{ $comment->name }}</td>
+
+<td>{{ $comment->comment }}</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+@endsection
+What is this?
+1️1. site/index.blade.php
+@extends('layouts.site')
+
+@section('content')
+
+@foreach($posts as $post)
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h3>
+
+<a href="/post/{{$post->id}}">
+{{$post->title}}
+</a>
+
+</h3>
+
+<p>
+
+{{ Str::limit($post->description,120) }}
+
+</p>
+
+<p>
+
+{{$post->comments->count()}} Comments
+
+</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+@endsection
+What is this?
+12. site/show.blade.php
+@extends('layouts.site')
+
+@section('content')
+
+<h2>{{$post->title}}</h2>
+
+<p>{{$post->description}}</p>
+
+<hr>
+
+<h4>{{$post->comments->count()}} Responses</h4>
+
+@foreach($post->comments as $comment)
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+<b>{{$comment->name}}</b>
+
+<p>{{$comment->comment}}</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+@endsection
+What is this?
+13. site/sidebar.blade.php
+<h4>Categories</h4>
+
+<ul>
+
+@foreach($categories as $cat)
+
+<li>
+
+<a href="/category/{{$cat->id}}">
+{{$cat->name}}
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
