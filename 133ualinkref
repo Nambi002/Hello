@@ -1,0 +1,166 @@
+Database (Shared)
+
+Both Admin Panel and User Interface use the same tables.
+
+Example:
+
+users
+categories
+posts
+comments
+
+Example relation:
+
+categories
+   ↑
+posts
+   ↑
+comments
+
+So:
+
+Admin creates posts
+
+Users read posts
+
+Users add comments
+
+2️⃣ Admin Side (Manage Content)
+
+Admin can:
+
+Create Post
+Edit Post
+Delete Post
+Create Category
+Edit Category
+Delete Category
+Moderate Comments
+
+Example routes:
+
+/admin/posts
+/admin/categories
+/admin/comments
+
+Example controller:
+
+Admin\PostController
+Admin\CategoryController
+
+Example page:
+
+Admin Dashboard
+→ Posts
+→ Categories
+→ Comments
+
+Admin writes content.
+
+3️⃣ User Side (Read Content)
+
+Users only view content.
+
+Example pages:
+
+Home page
+Post detail page
+Category filter
+Archive filter
+Comment form
+
+Routes:
+
+/
+/post/{id}
+/category/{id}
+/archive/{month}
+
+Controller:
+
+FrontendController
+4️⃣ Example Flow
+
+Admin adds post:
+
+Title: Laravel Blog Tutorial
+Category: Laravel
+Description: Learn Laravel step by step
+
+Saved in database:
+
+posts table
+
+Now user visits:
+
+http://127.0.0.1:8000
+
+User sees that same post.
+
+5️⃣ Code Example
+Admin creates post
+Admin\PostController
+Post::create([
+'title'=>$request->title,
+'description'=>$request->description,
+'category_id'=>$request->category_id
+]);
+
+Saved in:
+
+posts table
+User sees post
+FrontendController
+$posts = Post::with('category')->latest()->get();
+
+Shown in:
+
+site/index.blade.php
+6️⃣ Simple Architecture
+                DATABASE
+           -------------------
+           posts | categories
+           comments | users
+           -------------------
+
+             ↑           ↑
+         Admin Panel   User Interface
+         (CRUD)        (Read Only)
+7️⃣ Why This Is Done
+
+If admin and user used different tables:
+
+admin_posts
+user_posts
+
+It becomes very complex and unnecessary.
+
+So CMS systems use same tables.
+
+Examples:
+
+WordPress
+
+Medium
+
+Ghost CMS
+
+All follow this structure.
+
+8️⃣ In Your Blog Task
+
+Your reviewer expects:
+
+Admin Interface
+Dashboard
+Category CRUD
+Post CRUD
+Comment moderation
+User Interface
+Home page
+Post detail
+Category filter
+Archive filter
+Add comments
+
+But data source = same tables.
