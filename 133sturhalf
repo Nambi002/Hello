@@ -1,0 +1,296 @@
+Main Views Folder
+
+Location:
+
+resources/views/
+
+Inside this folder we create 4 subfolders:
+
+views
+ ├── admin
+ ├── site
+ ├── layouts
+ └── auth
+2️⃣ Layout Files
+
+These are common templates used by multiple pages.
+
+Location:
+
+resources/views/layouts/
+
+Files:
+
+layouts
+ ├── admin.blade.php
+ └── site.blade.php
+Example: admin.blade.php
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Panel</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+
+<div class="container">
+
+<a class="navbar-brand">Admin Dashboard</a>
+
+<a href="{{ route('home') }}" class="btn btn-success">
+View Site
+</a>
+
+</div>
+
+</nav>
+
+<div class="container mt-4">
+
+@yield('content')
+
+</div>
+
+</body>
+</html>
+What is this?
+3️⃣ Admin Panel Blade Files
+
+Location:
+
+resources/views/admin/
+
+Structure:
+
+admin
+ ├── dashboard.blade.php
+ ├── categories
+ │     ├── index.blade.php
+ │     ├── create.blade.php
+ │     └── edit.blade.php
+ ├── posts
+ │     ├── index.blade.php
+ │     ├── create.blade.php
+ │     └── edit.blade.php
+ └── comments
+       └── index.blade.php
+
+Example:
+
+dashboard.blade.php
+@extends('layouts.admin')
+
+@section('content')
+
+<h2>Dashboard</h2>
+
+<div class="row">
+
+<div class="col-md-4">
+
+<div class="card bg-primary text-white">
+
+<div class="card-body">
+
+<h4>Total Posts</h4>
+
+<h3>{{ $posts }}</h3>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-success text-white">
+
+<div class="card-body">
+
+<h4>Total Categories</h4>
+
+<h3>{{ $categories }}</h3>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card bg-warning text-white">
+
+<div class="card-body">
+
+<h4>Total Comments</h4>
+
+<h3>{{ $comments }}</h3>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+What is this?
+4️⃣ User Interface Blade Files
+
+Location:
+
+resources/views/site/
+
+Structure:
+
+site
+ ├── index.blade.php
+ ├── show.blade.php
+ └── sidebar.blade.php
+index.blade.php (Blog List Page)
+@extends('layouts.site')
+
+@section('content')
+
+@foreach($posts as $post)
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+<h3>
+
+<a href="/post/{{$post->id}}">
+
+{{$post->title}}
+
+</a>
+
+</h3>
+
+<p>
+
+{{ Str::limit($post->description,120) }}
+
+</p>
+
+<span class="badge bg-primary">
+
+{{$post->category->name}}
+
+</span>
+
+<p>
+
+{{$post->comments->count()}} Comments
+
+</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+@endsection
+What is this?
+show.blade.php (Blog Detail Page)
+@extends('layouts.site')
+
+@section('content')
+
+<h2>{{$post->title}}</h2>
+
+<p>{{$post->description}}</p>
+
+<hr>
+
+<h4>{{$post->comments->count()}} Responses</h4>
+
+@foreach($post->comments as $comment)
+
+<div class="card mb-2">
+
+<div class="card-body">
+
+<b>{{$comment->name}}</b>
+
+<p>{{$comment->comment}}</p>
+
+</div>
+
+</div>
+
+@endforeach
+
+@endsection
+What is this?
+5️⃣ Authentication Blade Files
+
+Location:
+
+resources/views/auth/
+
+Files:
+
+auth
+ ├── login.blade.php
+ └── register.blade.php
+
+These handle admin login / user login.
+
+6️⃣ Final Blade Folder Structure
+
+Your project should finally look like this:
+
+resources
+ └── views
+      ├── layouts
+      │     ├── admin.blade.php
+      │     └── site.blade.php
+      │
+      ├── admin
+      │     ├── dashboard.blade.php
+      │     ├── categories
+      │     │     ├── index.blade.php
+      │     │     ├── create.blade.php
+      │     │     └── edit.blade.php
+      │     │
+      │     ├── posts
+      │     │     ├── index.blade.php
+      │     │     ├── create.blade.php
+      │     │     └── edit.blade.php
+      │     │
+      │     └── comments
+      │           └── index.blade.php
+      │
+      ├── site
+      │     ├── index.blade.php
+      │     ├── show.blade.php
+      │     └── sidebar.blade.php
+      │
+      └── auth
+            ├── login.blade.php
+            └── register.blade.php
+
+Total blade files ≈ 12–15 files.
+
+7️⃣ How Blade Connects to Controllers
+
+Example:
+
+Controller:
+
+return view('site.index', compact('posts'));
+
+Laravel loads:
+
+resources/views/site/index.blade.php
