@@ -1,0 +1,271 @@
+Admin → Posts table → “Comments” column/button → Click → Open comments.blade.php → Show all comments for that post
+
+I’ll show complete step-by-step with all related files.
+
+1 Database (comments table)
+
+Make sure your comments migration looks like this.
+
+database/migrations/create_comments_table.php
+
+Schema::create('comments', function (Blueprint $table) {
+    $table->id();
+    $table->text('comment');
+    $table->foreignId('post_id')->constrained()->cascadeOnDelete();
+    $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+    $table->timestamps();
+});
+
+Run:
+
+php artisan migrate
+2 Models Relationships
+Post Model
+
+app/Models/Post.php
+
+class Post extends Model
+{
+    protected $fillable = [
+        'title','content','category_id','user_id'
+    ];
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+}
+Comment Model
+
+app/Models/Comment.php
+
+class Comment extends Model
+{
+    protected $fillable = [
+        'comment','post_id','user_id'
+    ];
+
+    public function post()
+    {
+        return $this->belongsTo(Post::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+3 Create Admin Comment Controller
+
+Run:
+
+php artisan make:controller Admin/CommentController
+Controller Code
+
+app/Http/Controllers/Admin/CommentController.php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Post;
+
+class CommentController extends Controller
+{
+    public function show($id)
+    {
+        $post = Post::with('comments.user')->findOrFail($id);
+
+        return view('admin.comments.index', compact('post'));
+    }
+}
+
+This loads:
+
+Post + all comments + user
+4 Routes
+
+Open routes/web.php
+
+use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\CommentController;
+
+Route::middleware(['auth'])->prefix('admin')->group(function () {
+
+    Route::resource('posts', PostController::class);
+
+    Route::get('posts/{id}/comments', [CommentController::class,'show'])
+        ->name('posts.comments');
+
+});
+5 Admin Posts Table (Add Comments Column)
+
+Edit:
+
+resources/views/admin/posts/index.blade.php
+
+<h2>Posts List</h2>
+
+<table border="1">
+
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Comments</th>
+</tr>
+
+@foreach($posts as $post)
+
+<tr>
+
+<td>{{ $post->id }}</td>
+
+<td>{{ $post->title }}</td>
+
+<td>
+
+<a href="{{ route('posts.comments',$post->id) }}">
+View Comments
+</a>
+
+</td>
+
+</tr>
+
+@endforeach
+
+</table>
+What is this?
+
+Now each post will have:
+
+View Comments
+
+button.
+
+6 Create Comments Blade
+
+Create folder:
+
+resources/views/admin/comments
+
+Create file:
+
+index.blade.php
+7 Comments Blade Code
+
+resources/views/admin/comments/index.blade.php
+
+<h1>Comments for Post</h1>
+
+<h3>{{ $post->title }}</h3>
+
+<table border="1">
+
+<tr>
+
+<th>ID</th>
+<th>User</th>
+<th>Comment</th>
+<th>Date</th>
+
+</tr>
+
+@foreach($post->comments as $comment)
+
+<tr>
+
+<td>{{ $comment->id }}</td>
+
+<td>{{ $comment->user->name }}</td>
+
+<td>{{ $comment->comment }}</td>
+
+<td>{{ $comment->created_at }}</td>
+
+</tr>
+
+@endforeach
+
+</table>
+
+<br>
+
+<a href="{{ route('posts.index') }}">Back to Posts</a>
+What is this?
+8 User Comment Form (Frontend)
+
+Inside user post page.
+
+Example:
+
+resources/views/user/post.blade.php
+
+<h2>{{ $post->title }}</h2>
+
+<p>{{ $post->content }}</p>
+
+<h3>Comments</h3>
+
+@foreach($post->comments as $comment)
+
+<p>
+<b>{{ $comment->user->name }}</b>
+: {{ $comment->comment }}
+</p>
+
+@endforeach
+
+<hr>
+
+<form method="POST" action="/comment">
+
+@csrf
+
+<input type="hidden" name="post_id" value="{{ $post->id }}">
+
+<textarea name="comment"></textarea>
+
+<button type="submit">Add Comment</button>
+
+</form>
+What is this?
+9 Comment Store Controller
+
+app/Http/Controllers/CommentController.php
+
+use App\Models\Comment;
+use Illuminate\Http\Request;
+
+class CommentController extends Controller
+{
+    public function store(Request $request)
+    {
+        Comment::create([
+            'comment'=>$request->comment,
+            'post_id'=>$request->post_id,
+            'user_id'=>auth()->id()
+        ]);
+
+        return back();
+    }
+}
+10 Comment Route
+
+routes/web.php
+
+use App\Http\Controllers\CommentController;
+
+Route::post('/comment',[CommentController::class,'store'])
+->middleware('auth');
+11 Result Flow
+Admin Dashboard
+      ↓
+Posts Page
+      ↓
+View Comments (button)
+      ↓
+/admin/posts/1/comments
+      ↓
+Comments Page
+      ↓
+Show all comments for that post
