@@ -1,0 +1,158 @@
+
+```
+posts
+categories
+category_post (pivot table)
+```
+
+Example:
+
+```
+Post: "Laravel Tutorial"
+
+Categories:
+✔ PHP
+✔ Laravel
+✔ Backend
+```
+
+---
+
+# 1️⃣ Pivot Table Migration
+
+Run:
+
+```bash
+php artisan make:migration create_category_post_table
+```
+
+Migration file:
+
+```php
+Schema::create('category_post', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('post_id')->constrained()->cascadeOnDelete();
+    $table->foreignId('category_id')->constrained()->cascadeOnDelete();
+});
+```
+
+Run migration:
+
+```bash
+php artisan migrate
+```
+
+---
+
+# 2️⃣ Model Relationships
+
+### Post Model
+
+`app/Models/Post.php`
+
+```php
+public function categories()
+{
+    return $this->belongsToMany(Category::class);
+}
+```
+
+---
+
+### Category Model
+
+`app/Models/Category.php`
+
+```php
+public function posts()
+{
+    return $this->belongsToMany(Post::class);
+}
+```
+
+---
+
+# 3️⃣ Create Post Page (Multiple Select)
+
+`resources/views/posts/create.blade.php`
+
+```html
+<label>Select Categories</label>
+
+<select name="categories[]" multiple>
+
+@foreach($categories as $category)
+
+<option value="{{ $category->id }}">
+{{ $category->name }}
+</option>
+
+@endforeach
+
+</select>
+```
+
+Important:
+
+```
+name="categories[]"
+multiple
+```
+
+This allows **multiple category selection**.
+
+---
+
+# 4️⃣ Controller Store Method
+
+`PostController.php`
+
+```php
+public function store(Request $request)
+{
+
+$post = Post::create([
+'title'=>$request->title,
+'description'=>$request->description,
+'user_id'=>auth()->id()
+]);
+
+$post->categories()->attach($request->categories);
+
+return redirect()->route('posts.index');
+
+}
+```
+
+---
+
+# 5️⃣ Edit Post (Auto Selected Categories)
+
+```html
+<select name="categories[]" multiple>
+
+@foreach($categories as $category)
+
+<option value="{{ $category->id }}"
+@if($post->categories->contains($category->id)) selected @endif>
+
+{{ $category->name }}
+
+</option>
+
+@endforeach
+
+</select>
+```
+
+---
+
+# 6️⃣ Update Method
+
+```php
+$post->categories()->sync($request->categories);
+```
+
+---
+
+#
