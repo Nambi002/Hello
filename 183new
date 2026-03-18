@@ -1,0 +1,612 @@
+FINAL WORKING MINIMUM (COPY EXACTLY)
+ create.blade.php
+<form method="POST" action="{{ route('posts.store') }}">
+@csrf
+
+<input type="text" name="title" placeholder="Title" required>
+
+<textarea name="content" required></textarea>
+
+<br><br>
+
+<label>Categories</label>
+
+<select name="categories[]" multiple style="height:120px;">
+
+@foreach($categories as $category)
+    <option value="{{ $category->id }}">
+        {{ $category->name }}
+    </option>
+@endforeach
+
+</select>
+
+<br><br>
+
+<button type="submit">Save Post</button>
+
+</form>
+What is this?
+ STEP 1: DEBUG (MANDATORY)
+
+In controller:
+
+public function store(Request $request)
+{
+    dd($request->all());
+}
+ EXPECTED OUTPUT
+[
+  "title" => "Test",
+  "content" => "Test",
+  "categories" => ["1","2","3"]
+]
+ YOUR CURRENT OUTPUT (PROBLEM)
+
+You are getting:
+
+[
+  "title" => "...",
+  "content" => "..."
+]
+
+ NO categories → so nothing saves
+
+ 3 CRITICAL THINGS YOU MUST VERIFY
+ 1. name="categories[]"
+
+✔ MUST be:
+
+<select name="categories[]" multiple>
+What is this?
+
+ NOT:
+
+<select name="categories">
+What is this?
+ 2. SELECT must be inside FORM
+
+✔ Correct:
+
+<form>
+   <select name="categories[]"></select>
+</form>
+What is this?
+
+Wrong:
+
+<form></form>
+
+<select name="categories[]"></select>
+What is this?
+ 3. Submit button type
+
+✔ Correct:
+
+<button type="submit">Save</button>
+What is this?
+
+ Wrong:
+
+<button type="button">Save</button>
+What is this?
+ STEP 2: FINAL CONTROLLER
+
+After debug works:
+
+public function store(Request $request)
+{
+    $post = Post::create([
+        'title' => $request->title,
+        'content' => $request->content,
+        'user_id' => auth()->id()
+    ]);
+
+    $post->categories()->sync($request->categories ?? []);
+
+    return redirect()->route('posts.index');
+}
+ STEP 3: CHECK DB
+
+Run:
+
+SELECT * FROM category_post;
+ EXPECTED
+post_id | category_id
+1       | 2
+1       | 3
+1       | 5
+ STEP 4: UI FIX (IF EMPTY)
+
+Controller:
+
+$posts = Post::with('categories')->get();
+
+Blade:
+
+@foreach($post->categories as $category)
+    {{ $category->name }}
+@endforeach
+
+
+
+
+
+
+-----------------------------------------
+
+
+not ajax 
+
+
+STEP 1: Create Category FIRST
+
+Create category manually in admin:
+
+<form method="POST" action="{{ route('categories.store') }}">
+@csrf
+
+<input type="text" name="name" placeholder="Category Name">
+
+<button type="submit">Add Category</button>
+
+</form>
+What is this?
+CategoryController
+public function store(Request $request)
+{
+    Category::create([
+        'name' => $request->name
+    ]);
+
+    return back();
+}
+Category Model
+protected $fillable = ['name'];
+ STEP 2: Now Create Post
+
+Now categories already exist in DB 
+
+Create Post Blade (IMPORTANT)
+<form method="POST" action="{{ route('posts.store') }}">
+@csrf
+
+<input type="text" name="title" placeholder="Title">
+
+<textarea name="content"></textarea>
+
+<br><br>
+
+<select name="categories[]" multiple>
+
+@foreach($categories as $category)
+    <option value="{{ $category->id }}">
+        {{ $category->name }}
+    </option>
+@endforeach
+
+</select>
+
+<br><br>
+
+<button type="submit">Save</button>
+
+</form>
+What is this?
+ STEP 3: CONTROLLER (FINAL FIX)
+public function store(Request $request)
+{
+    // DEBUG
+    dd($request->all());
+
+    $post = Post::create([
+        'title' => $request->title,
+        'content' => $request->content,
+        'user_id' => auth()->id()
+    ]);
+
+    $post->categories()->sync($request->categories ?? []);
+
+    return redirect()->route('posts.index');
+}
+ STEP 4: EXPECTED DEBUG OUTPUT
+[
+ "title" => "Test",
+ "content" => "Test",
+ "categories" => ["1","2"]
+]
+ YOUR CURRENT MISTAKE
+
+You are doing something like:
+
+<input type="text" name="category">
+
+
+
+
+----------------------------------------
+
+
+
+FIX — DO THIS EXACTLY (NO CHANGE)
+
+Copy paste this FULL working form 
+
+<form method="POST" action="{{ route('posts.store') }}">
+@csrf
+
+<input type="text" name="title" placeholder="Title">
+
+<textarea name="content" placeholder="Content"></textarea>
+
+<br><br>
+
+<label>Categories</label>
+
+<select name="categories[]" multiple style="height:120px; width:200px;">
+
+@foreach($categories as $category)
+    <option value="{{ $category->id }}">
+        {{ $category->name }}
+    </option>
+@endforeach
+
+</select>
+
+<br><br>
+
+<button type="submit">Save</button>
+
+</form>
+What is this?
+ IMPORTANT CHECKS (VERY IMPORTANT)
+ 1. SELECT must be INSIDE form
+
+ WRONG:
+
+<form>...</form>
+
+<select>...</select>
+What is this?
+
+ CORRECT:
+
+<form>
+   <select></select>
+</form>
+What is this?
+ 2. NAME MUST BE ARRAY
+name="categories[]"
+What is this?
+
+ NOT:
+
+name="categories"
+What is this?
+ 3. MULTIPLE MUST EXIST
+<select multiple>
+What is this?
+ 4. TEST AGAIN
+
+Add this in controller:
+
+dd($request->all());
+ Now you MUST see:
+[
+  "title" => "Test",
+  "content" => "Test",
+  "categories" => ["1","2","3"]
+]
+ IF STILL NOT WORKING (VERY IMPORTANT CASE)
+ You are using AJAX "Add Category" right?
+
+Then your dropdown might be:
+
+<select id="categorySelect">
+What is this?
+
+ Missing name
+
+FIX:
+<select id="categorySelect" name="categories[]" multiple>
+What is this?
+ ALSO CHECK THIS (BIG MISTAKE)
+
+If using JS:
+
+$('#addCategoryBtn').click(function(){
+   // ...
+});
+
+Make sure your submit button is NOT type="button"
+
+ WRONG
+<button type="button">Save</button>
+What is this?
+ CORRECT
+<button type="submit">Save</button>
+What is this?
+ FINAL WORKING CONTROLLER
+public function store(Request $request)
+{
+    $post = Post::create([
+        'title' => $request->title,
+        'content' => $request->content,
+        'user_id' => auth()->id()
+    ]);
+
+    $post->categories()->sync($request->categories ?? []);
+
+    return redirect()->route('posts.index');
+}
+
+
+
+--------------------------
+
+
+STEP 1: HARD DEBUG (Do this EXACTLY)
+
+In your PostController@store:
+
+public function store(Request $request)
+{
+    dd($request->all());
+}
+ Tell me what you get
+ Expected:
+[
+  "title" => "Test",
+  "content" => "Test content",
+  "categories" => ["1","2","3"]
+]
+ If you see:
+"categories" => "3"
+
+PROBLEM: Missing [] in Blade
+
+ If you see:
+NO "categories"
+
+ PROBLEM: Form not sending data
+
+ STEP 2: FIX BLADE (MOST COMMON ERROR)
+
+
+<form method="POST" action="{{ route('posts.store') }}">
+@csrf
+
+<select name="categories[]" multiple style="height:120px;">
+
+@foreach($categories as $category)
+<option value="{{ $category->id }}">
+{{ $category->name }}
+</option>
+@endforeach
+
+</select>
+
+<button type="submit">Save</button>
+
+</form>
+What is this?
+ STEP 3: CONTROLLER (FINAL FIX)
+
+Replace your store() FULLY with this:
+
+public function store(Request $request)
+{
+    // DEBUG
+    dd($request->categories); // remove after checking
+
+    $post = Post::create([
+        'title' => $request->title,
+        'content' => $request->content,
+        'user_id' => auth()->id()
+    ]);
+
+    if (!empty($request->categories)) {
+        $post->categories()->sync($request->categories);
+    }
+
+    return redirect()->route('posts.index');
+}
+ STEP 4: CHECK DATABASE DIRECTLY
+
+After submitting, run this in MySQL:
+
+SELECT * FROM category_post;
+ Expected:
+id | post_id | category_id
+1  | 1       | 2
+2  | 1       | 3
+3  | 1       | 5
+ If table is EMPTY
+
+Problem = relation not inserting
+
+ STEP 5: FORCE FIX (IMPORTANT)
+
+In Post model, write this explicitly:
+
+public function categories()
+{
+    return $this->belongsToMany(Category::class, 'category_post', 'post_id', 'category_id');
+}
+STEP 6: CHECK TABLE NAME
+
+Run:
+
+php artisan migrate:status
+
+Make sure table name is EXACT:
+
+category_post
+ STEP 7: FINAL TEST (NO UI)
+
+Run in Tinker:
+
+php artisan tinker
+$post = App\Models\Post::first();
+$post->categories()->sync([1,2,3]);
+
+
+From your message:
+
+“last category only taking / empty”
+
+90% chance:
+
+<select name="categories">
+What is this?
+
+instead of:
+
+<select name="categories[]" multiple>
+What is this?
+ FINAL WORKING MINIMUM
+Blade
+<select name="categories[]" multiple>
+What is this?
+Controller
+$post->categories()->sync($request->categories ?? []);
+
+
+--------------------
+
+
+
+
+FIRST CHECK (Most Important)
+In your <select> tag
+<select name="categories[]" multiple>
+What is this?
+
+ MUST be categories[] (array)
+If you wrote categories → only last value comes
+
+2️ DEBUG INPUT (VERY IMPORTANT)
+
+Inside your store() method, temporarily add:
+
+dd($request->categories);
+Expected Output:
+array:3 [
+  0 => "1"
+  1 => "2"
+  2 => "4"
+]
+
+"4"
+
+Problem = Blade (missing [])
+
+
+null
+
+ Problem = form not sending data
+
+ 3️.FORM CHECK
+
+Make sure your form has:
+
+<form method="POST" action="{{ route('posts.store') }}">
+@csrf
+What is this?
+4️ CONTROLLER FIX (IMPORTANT)
+
+Update your store() method like this:
+
+public function store(Request $request)
+{
+    $post = Post::create([
+        'title' => $request->title,
+        'content' => $request->content,
+        'user_id' => auth()->id()
+    ]);
+
+    if($request->has('categories')){
+        $post->categories()->sync($request->categories);
+    }
+
+    return redirect()->route('posts.index');
+}
+
+ Use sync() instead of attach() (more reliable)
+
+5️ CHECK PIVOT TABLE NAME
+
+Laravel expects:
+
+category_post
+If your table name is different → define manually:
+return $this->belongsToMany(Category::class, 'category_post');
+6️ CHECK MIGRATION (CRITICAL)
+
+Make sure table exists:
+
+category_post
+
+Columns:
+
+id
+post_id
+category_id
+ 7️ CHECK MODEL (VERY IMPORTANT)
+Post.php
+public function categories()
+{
+    return $this->belongsToMany(Category::class);
+}
+Category.php
+public function posts()
+{
+    return $this->belongsToMany(Post::class);
+}
+ 8️ EDIT PAGE FIX
+
+Sometimes edit page breaks it.
+
+Use:
+
+$post->categories()->sync($request->categories ?? []);
+ 9️ DISPLAY FIX (UI)
+
+If UI shows empty:
+
+Controller:
+$posts = Post::with('categories')->get();
+Blade:
+@foreach($post->categories as $category)
+    {{ $category->name }}
+@endforeach
+🔟 COMMON ROOT CAUSES (YOUR CASE)
+
+Based on your issue:
+
+
+
+Most likely:
+
+Problem 1
+<select name="categories">
+What is this?
+Problem 2
+
+No multiple
+
+ Problem 3
+
+Using attach() with wrong data
+
+FINAL WORKING CODE (SHORT)
+Blade
+<select name="categories[]" multiple>
+What is this?
+Controller
+$post->categories()->sync($request->categories ?? []);
+Debug
+dd($request->categories);
+
+
+dd($request->all());
