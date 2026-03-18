@@ -1,0 +1,139 @@
+public function storeAjax(Request $request)
+{
+    $category = Category::create([
+        'name' => $request->name
+    
+    ]);
+
+    return response()->json($category);
+
+
+    
+}
+
+
+@extends('admin.dashboard')
+
+@section('content')
+
+
+
+<form method="POST" action="/admin/posts">
+
+@csrf
+<div class="d-flex justify-content-center align-items-center" >
+<div class="card mb-3 mt-5 w-50">
+
+  <h5 class="card-header"><b>Add Post</b></h5>
+  <div class="card-body">
+
+
+<label class="mb-3 mt-3" ><b>Title</b> (Required*)</label>
+<input type="text" name="title" class="form-control" required>
+
+
+<div class="mb-3 mt-3" >
+
+<label class="mb-3 mt-3"><b>Description</b> (Required*)</label>
+<textarea name="description" class="form-control" required></textarea>
+
+</div>
+
+
+<div class="mb-3 mt-3">
+
+<label class="mb-3 mt-3"><b>Category</b> (Required*) </label>
+
+<select name="categories[]"  class="selectpicker form-control"   id="categorySelect"  multiple aria-label="size 3 select example" multiple>
+
+
+@foreach($categories as $category)
+
+<option  value="{{$category->id}}">
+   @if(isset($post) && $post->categories->contains($category->id)) selected @endif
+{{$category->name}}
+</option>
+
+
+@endforeach
+
+</select>
+
+
+
+
+
+
+
+
+
+
+
+<div class="mb-5 mt-3">
+<label class="mb-3 mt-5"><b>Add New Category</b> </label>
+<input type="text" id="newCategoryName" placeholder="New Category" class="form-control">
+<button type="button" id="addCategoryBtn" class="btn btn-secondary mt-3">
+Add Category
+</button>
+</div>
+</div>
+
+<div class="back">
+<button class="btn btn-success mt-5" style="width:100%;">Save</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</form>
+
+<script>
+  $(document).ready(function(){
+$('#addCategoryBtn').click(function(){
+  var name = $('#newCategoryName').val();
+    $.ajax({
+      url: "{{ route('category.ajax.store') }}",
+      type: "POST",
+      data: {
+            name: name,
+            _token: "{{ csrf_token() }}"
+        },
+      success: function(response){
+      console.log(response);
+      //   $('#categorySelect').append('<option value="'+response.id+'" selected>'+response.name+'</option>' );
+
+        $('#categorySelect').empty();
+      $('#categorySelect').append('<option value="">Select an option</option>');
+        $.each(response.items, function(key, value) {
+          $('#categorySelect').append('<option value="' + key + '">' + value + '</option>');
+      });
+
+
+     //  $( "#categorySelect" ).append( "<option value='" + response.id + "' selected>" + response.name + "</option>" );
+     //    $('#newCategoryName').val('');
+      //      alert('Category added successfully!'); 
+        }
+    });
+});
+
+   });
+
+
+
+
+
+</script>
+
+@endsection
+
+
+
+
+
+
+
+
+
+
+
+
