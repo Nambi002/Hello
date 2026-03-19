@@ -1,0 +1,16 @@
+public function category($id)
+{
+    $categories = Category::all();
+
+    $archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+        ->orderBy('created_at','desc')
+        ->distinct()
+        ->get();
+
+    //  MAIN FIX
+    $posts = Post::whereHas('categories', function($q) use ($id){
+        $q->where('categories.id', $id);
+    })->with('categories')->get();
+
+    return view('site.index', compact('posts','categories','archives'));
+}
