@@ -1,0 +1,467 @@
+site/index.blade.php
+
+@extends('site.dashboard1')
+@section('content')
+
+<div class="row">
+
+<div class=" card col-8 mt-5">
+
+@foreach($posts as $post)
+
+<div class=" mb-1 mt-4" >
+<a href="/post/{{$post->id}}" class="post-link">
+<div class="one" >
+
+<h4>{{$post->title}}</h4>
+
+<p>{{ Str::limit($post->description,150) }}</p>
+
+
+@foreach($post->categories as $cat)
+ <span class="badge bg-secondary me-1">   {{ $cat->name }}</span>
+ 
+@endforeach
+
+
+<br>
+<small>Posted on {{$post->created_at->format('F d, Y')}}</small>
+</a>
+</div>
+</div>
+<hr>
+@endforeach
+
+</div>
+<div class="col-md-4">
+<div class="card mb-3 mt-5">
+<div class="card-header bg-dark text-white">
+Categories
+</div>
+
+<ul class="list-group">
+
+@foreach($categories as $cat)
+
+
+
+<li class="list-group-item">
+
+<i class="fa fa-list" ></i> 
+      <a href="{{ route('category.posts', $cat->id) }}" id="two">
+
+
+{{$cat->name}}
+
+</a>
+</li>
+@endforeach
+
+
+</ul>
+
+</div>
+
+<div class="card mt-5">
+
+<div class="card-header bg-dark text-white">
+
+Archives
+
+</div>
+
+<ul class="list-group">
+
+@foreach($archives as $archive)
+
+<li class="list-group-item">
+
+<i class="fa fa-calendar"></i> <a href="/archive/{{$archive->month}}/{{$archive->year}}" id="two">
+
+{{$archive->month}} {{$archive->year}}
+
+</a>
+
+</li>
+
+@endforeach
+
+</ul>
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+
+
+
+
+modals 
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+
+
+class Post extends Model
+{
+    protected $fillable = ['title','description','content','category_id','user_id'];
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+
+}
+
+
+
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
+class Category extends Model
+{
+    protected $fillable = ['id','name','title','description'];
+
+    public function posts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class);
+    }
+
+
+}
+
+
+
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Post;
+use App\Models\User;
+
+use App\Models\Category;
+
+class CategoryController extends Controller
+{
+
+
+public function index()
+{
+    
+$categories = Category::all();
+
+return view('admin.categories.index',compact('categories'));
+}
+
+
+public function overview()
+{
+$categories = Category::count();
+
+return view('admin.overview',compact('categories'));
+}
+
+
+public function create()
+{
+return view('admin.categories.create');
+}
+
+
+
+public function store(Request $request)
+{
+     
+
+Category::create($request->all());
+
+return redirect()->route('categories.index')
+->with('success','Category Added');
+}
+
+
+
+public function edit($id)
+{
+$category=Category::find($id);
+
+return view('admin.categories.edit',compact('category'));
+}
+
+
+
+public function update(Request $request,$id)
+{
+$category=Category::find($id);
+
+$category->update($request->all());
+
+return redirect()->route('categories.index')
+->with('success','Category Updated');
+}
+
+
+
+public function destroy($id)
+{
+Category::destroy($id);
+
+return redirect()->route('categories.index')
+->with('success','Category Deleted');
+}
+
+
+public function storeAjax(Request $request)
+{
+    $category = Category::create([
+        'name' => $request->name
+    
+    ]);
+
+    //return response()->json($category);
+
+    
+    $categories = Category::pluck('name', 'id');
+
+    return response()->json([
+        'items' => $categories
+    ]);
+
+
+    
+}
+
+
+
+}
+
+
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Post;
+use App\Models\User;
+use App\Models\Category;
+use App\Models\Comment;
+use Illuminate\Support\Facades\Auth;
+
+use Illuminate\Support\Facades\Session;
+
+class PostController extends Controller
+{
+
+    public function index()
+    {
+      //  $user = User::find(session('user_id'));  
+     $posts = Post::with('categories','comments')->get();           
+        //$posts = Post::all();
+        return view('admin.posts.index',compact('posts'));
+    }
+
+    public function overview()
+    {
+    $posts = Post::count();
+    return view('admin.overview',compact('posts'));
+    }
+
+    public function create()
+    {
+        $categories = Category::all();
+
+        return view('admin.posts.create',compact('categories'));
+    }
+
+    public function store(Request $request)
+    {
+     // $user = User::find(Session::get('user_id'));
+//dd($request->all());
+            $post = Post::create([
+
+            'title'=>$request->title,
+            'description'=>$request->description,
+            'category_id'=>$request->categories[0],
+            'user_id'=>auth()->id()
+
+        ]);
+     
+         $post->categories()->attach($request->categories);
+
+        return redirect('/admin/posts')
+        ->with('success','Post Added Successfully');
+    }
+
+
+    public function edit($id)
+    {
+        $post = Post::findOrFail($id);
+
+        $categories = Category::all();
+
+        return view('admin.posts.edit',compact('post','categories'));
+    }
+
+
+    public function update(Request $request,$id)
+    {
+        $post = Post::findOrFail($id);
+
+        $post->update([
+
+            'title'=>$request->title,
+            'description'=>$request->description,
+            'category_id'=>$request->categories[0],
+
+        ]);
+
+        $post->categories()->sync($request->categories);
+
+        return redirect('/admin/posts')
+        ->with('success','Post Updated Successfully');
+    }
+
+    public function destroy($id)
+    {
+        $post = Post::findOrFail($id);
+
+        $post->delete();
+
+        return redirect('/admin/posts')
+        ->with('success','Post Deleted Successfully');
+    }
+
+    public function comments($id)
+    {
+        $comments = Comment::where('post_id',$id)
+        ->with('user')
+        ->get();
+
+        return view('admin.posts.comments',compact('comments'));
+    }
+
+
+    public function show($id)
+    {
+
+        $post = Post::with('comments','category')->findOrFail($id);
+
+        $categories = Category::all();
+
+        $archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+                ->orderBy('created_at','desc')
+                ->distinct()
+                ->get();
+
+        return view('site.show',compact('post','categories','archives'));
+    }
+}
+
+
+
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\Admin\CategoryController;
+
+use App\Http\Controllers\Admin\AuthController;
+
+use App\Http\Controllers\Admin\PostController;
+
+use App\Http\Controllers\Admin\overviewController;
+
+
+use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\CommentController;
+
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+
+
+
+ Route::prefix('admin')->group(function () {
+ Route::get('/login', [AuthController::class, 'showLogin']);
+ Route::post('/login', [AuthController::class, 'login']);
+ Route::get('/logout', [AuthController::class, 'logout']);
+ Route::get('/dashboard', [AuthController::class, 'dashboard']);
+
+ });
+
+ //Route::middleware(['auth'])->prefix('admin')->group(function () {
+ 
+ //});
+
+Route::middleware(['admin.auth'])->prefix('admin')->group(function () {
+Route::get('/overview', [overviewController::class, 'overview']);
+Route::resource('categories',CategoryController::class);
+Route::resource('posts', PostController::class);
+Route::resource('comments', CommentController::class);
+
+});
+
+//133-3
+Route::prefix('user')->group(function () {
+Route::get('/login', [FrontendController::class,'index'])->name('home');
+ });
+//133-3
+
+Route::get('/post/{id}', [FrontendController::class,'show'])->name('post.show');
+
+Route::get('/', [FrontendController::class,'index'])->name('home');
+Route::get('/post/{id}', [FrontendController::class,'show'])->name('post.show');
+Route::get('/category/{id}', [FrontendController::class,'category'])->name('category.posts');
+Route::get('/archive/{month}/{year}', [FrontendController::class,'archive'])->name('archive.posts');
+Route::post('/comment/store', [CommentController::class,'store'])->name('comment.store');
+
+Route::get('posts/{id}/comments', [CommentController::class,'show'])
+        ->name('posts.comments');
+
+
+
+Route::get('/comment/{id}/edit', [CommentController::class,'edit'])->name('comment.edit');
+Route::get('/comment/{id}', [CommentController::class,'update'])->name('comment.update');
+
+
+
+Route::post('/admin/category-ajax',[CategoryController::class,'storeAjax'])
+->name('category.ajax.store');
+
+
+
