@@ -1,4 +1,9 @@
-site/index.blade.php
+
+post 1 -> have mauliple category like php python js dotnet
+
+in user interface page when i click category like php -> it show post 1
+
+but when i click category like python or js or dotnet -> it show nothing ???site/index.blade.php
 
 @extends('site.dashboard1')
 @section('content')
