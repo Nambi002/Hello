@@ -1,0 +1,150 @@
+sit/in.blade.php
+
+@foreach($posts as $post)
+    <h3>{{ $post->title }}</h3>
+
+    <p>
+        Categories:
+        @foreach($post->categories as $cat)
+            {{ $cat->name }}
+        @endforeach
+    </p>
+@endforeach
+
+BLADE (CATEGORY CLICK)
+
+@foreach($categories as $cat)
+    <a href="{{ route('category.posts', $cat->id) }}">
+        {{ $cat->name }}
+    </a>
+@endforeach
+
+--------------------
+
+
+jq
+
+$('#categorySelect').empty();
+
+$.each(response.items, function(key, value) {
+    $('#categorySelect').append('<option value="' + key + '">' + value + '</option>');
+});
+
+controller
+
+
+public function storeAjax(Request $request)
+{
+    // create category
+    Category::create([
+        'name' => $request->name
+    ]);
+
+    // get ALL categories (id => name)
+    $categories = Category::pluck('name', 'id');
+
+    // return in 'items' (IMPORTANT)
+    return response()->json([
+        'items' => $categories
+    ]);
+}
+
+
+success: function(response){
+
+    console.log(response);
+
+    $('#categorySelect').empty();
+
+    $.each(response.items, function(key, value) {
+        $('#categorySelect').append(
+            '<option value="' + key + '">' + value + '</option>'
+        );
+    });
+
+    // refresh UI
+    $('#categorySelect').selectpicker('refresh');
+
+    $('#newCategoryName').val('');
+}
+
+
+
+
+
+debug code
+
+$('#addCategoryBtn').click(function(){
+
+    var name = $('#newCategoryName').val();
+
+    console.log("Clicked");
+    console.log("Input value:", name);
+
+    $.ajax({
+        url: "{{ route('category.ajax.store') }}",
+        type: "POST",
+        data: {
+            name: name,
+            _token: "{{ csrf_token() }}"
+        },
+
+        success: function(response){
+            console.log("SUCCESS RESPONSE:", response);
+
+            $('#categorySelect').empty();
+
+            $.each(response.items, function(key, value) {
+                console.log("Loop:", key, value);
+
+                $('#categorySelect').append(
+                    '<option value="' + key + '">' + value + '</option>'
+                );
+            });
+
+            $('#categorySelect').selectpicker('refresh');
+
+            $('#newCategoryName').val('');
+        },
+
+        error: function(xhr){
+            console.log("ERROR:", xhr.responseText);
+        }
+    });
+
+});
+
+
+public function storeAjax(Request $request)
+{
+    Category::create([
+        'name' => $request->name
+    ]);
+
+    $categories = Category::pluck('name', 'id');
+
+    return response()->json([
+        'items' => $categories
+    ]);
+}
+
+
+success: function(response){
+
+    $('#categorySelect').empty();
+
+    $.each(response.items, function(key, value) {
+        $('#categorySelect').append(
+            '<option value="' + key + '">' + value + '</option>'
+        );
+    });
+
+    $('#categorySelect').selectpicker('destroy');
+    $('#categorySelect').selectpicker();
+
+}
+
+
+php artisan route:clear
+php artisan cache:clear
+php artisan config:clear
