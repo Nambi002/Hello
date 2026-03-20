@@ -1,0 +1,22 @@
+@foreach($categories as $cat)
+
+<li class="list-group-item">
+
+<a href="{{ route('category.posts', [
+    'categories' => [$cat->id],  // send as array
+    'month' => request('month'),
+    'year' => request('year')
+]) }}"
+
+class="{{ in_array($cat->id, request('categories', [])) ? 'fw-bold text-primary' : '' }}">
+
+{{ $cat->name }}
+
+</a>
+
+</li>
+
+@endforeach
+
+
+
