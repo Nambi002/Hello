@@ -1,0 +1,77 @@
+YOUR REQUIREMENT
+Step 1 → Select Category = PHP
+Step 2 → From those results → filter by Archive (Month + Year)
+
+Final Result:
+Only PHP posts from 2025 (or selected month/year)
+SOLUTION: COMBINE FILTERS (CATEGORY + ARCHIVE)
+
+ You must pass both filters in URL (GET request)
+
+ STEP 1: UPDATE ROUTE (SAME)
+Route::get('/category', [FrontendController::class,'category'])->name('category.posts');
+STEP 2: UPDATE CATEGORY UI
+<form method="GET" action="{{ route('category.posts') }}">
+
+@foreach($categories as $cat)
+    <input type="checkbox" name="categories[]" value="{{ $cat->id }}">
+    {{ $cat->name }}
+@endforeach
+
+<button type="submit">Filter</button>
+
+</form>
+What is this?
+STEP 3: UPDATE ARCHIVE LINK (IMPORTANT)
+
+ Modify archive link to keep category filter
+
+<a href="{{ route('category.posts', [
+    'categories' => request('categories'),
+    'month' => $archive->month,
+    'year' => $archive->year
+]) }}">
+    {{$archive->month}} {{$archive->year}}
+</a>
+What is this?
+ STEP 4: CONTROLLER (FINAL LOGIC )
+public function category(Request $request)
+{
+    $categories = Category::all();
+
+    $archives = Post::selectRaw('YEAR(created_at) year, MONTHNAME(created_at) month')
+        ->orderBy('created_at','desc')
+        ->distinct()
+        ->get();
+
+    $posts = Post::with('categories');
+
+    // CATEGORY FILTER
+    if($request->categories){
+        foreach($request->categories as $catId){
+            $posts->whereHas('categories', function($q) use ($catId){
+                $q->where('categories.id', $catId);
+            });
+        }
+    }
+
+    //  ARCHIVE FILTER
+    if($request->month && $request->year){
+        $posts->whereMonth('created_at', date('m', strtotime($request->month)))
+              ->whereYear('created_at', $request->year);
+    }
+
+    $posts = $posts->get();
+
+    return view('site.index', compact('posts','categories','archives'));
+}
+ HOW THIS WORKS
+Select PHP
+   ↓
+URL → /category?categories[]=1
+
+Click 2025
+   ↓
+URL → /category?categories[]=1&month=January&year=2025
+
+Controller applies BOTH filters
