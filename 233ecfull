@@ -1,0 +1,180 @@
+Laravel Task Document
+��Project Overview
+Develop a Laravel-based application with Admin and User roles, including 
+authentication, product management, order processing, and approval workflows.
+��Authentication Module
+Common Login System
+• Single Login Page for both Admin & User
+• Dropdown selection:
+o Admin
+o User
+• Based on selection:
+o Validate credentials
+o Redirect to respective dashboard
+Customer Login Features
+• Email + Password + OTP (via email)
+• OTP validity: 1 minute
+• Use Mailtrap for email testing
+��User Module
+Public Access (Before Login)
+• View:
+o Products (Category-wise listing)
+• Restriction:
+o Cannot place orders without login
+User Registration
+• Fields:
+o Name
+o Email
+o Mobile
+o Password
+• After registration:
+o User goes to Admin Approval (Unverified Users)
+User Login
+• Only Admin Approved Users can login
+• OTP verification required
+User Dashboard
+Header
+• Logo (Left)
+• Profile Name + Logout (Right)
+User Features
+1. My Profile
+• Update:
+o Profile Picture
+o Name
+o Mobile
+2. Change Password
+• Fields:
+o Current Password
+o New Password
+o Confirm Password
+3. Forgot Password ( Next Sprint )
+• Email-based OTP verification
+• Reset password flow
+Address Management (Checkout)
+First-Time User
+• Enter:
+o Name
+o Email
+o Mobile
+o Address1, Address2
+o City, State, Country, Pincode
+Existing User
+• Show saved addresses (Radio button selection)
+• Option to:
+o Select existing
+o Add new address
+Order Flow
+Add to Cart → Checkout
+• Only logged-in users allowed
+Place Order
+• On order creation:
+o Reduce:
+▪ Stock
+▪ Saleable Quantity
+• Show the selected product in right side section, left side Address related 
+information need to show here
+My Orders
+• Show logged-in user’s orders
+��️Admin Module
+Admin Login
+• Same login page (role-based selection)
+• Admin credentials only
+Admin Dashboard
+Header
+• Admin Name
+• My Profile
+• Logout
+Sidebar Menu
+• Customers
+• Categories
+• Products
+• Orders
+��Customer Management
+Sections
+1. Unverified Users
+• Newly registered users
+• Admin can:
+o Approve user
+2. Verified Users
+• Approved users
+• Actions:
+o Inactivate/Delete
+3. Deleted / Inactive Users
+• Inactive users list
+��Category Module
+Features
+• Create:
+o Main Category
+o Sub Category (with parent)
+• CRUD operations
+��Product Module
+Product Fields
+• Name
+• SKU
+• Price
+• Short Description
+• Long Description
+• Stock
+• Saleable Quantity (optional )
+• Category Mapping:
+o Main Category
+o Sub Category
+o Both allowed
+Features
+• Create / Update / Delete
+• Assign categories
+��Orders Module (Admin)
+Features
+• View all customer orders
+• Pagination
+• Sorting
+• Order details view
+��Session Management
+Requirements
+• Maintain session after login
+• Destroy session on logout
+• Protect routes using middleware
+��️Middleware & Security
+Middleware Usage
+• Protect:
+o User routes
+o Admin routes
+Rules
+• Users cannot access Admin panel
+• Admin cannot login via User role
+• Session validation required for:
+o Profile
+o Orders
+o Checkout
+��Routing Structure
+User Routes
+• Register
+• Login
+• Forgot Password
+• Profile
+• Products
+• Cart
+• Checkout
+• Orders
+Admin Routes
+• Login
+• Dashboard
+• Customers
+• Categories
+• Products
+• Orders
+��Additional Requirements
+• Proper MVC structure
+• Use Laravel best practices
+• Validation for all forms
+• Error handling
+• Pagination where needed
+⏳Timeline
+• Complete full implementation within 1 week
+• Cover:
+o Routes
+o Middleware
+o Session handling
+o Authentication
+o CRUD operations
+o Order workflow
