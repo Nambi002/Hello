@@ -1,0 +1,565 @@
+Good — this is a **real-world level project**, and you’re thinking correctly. I’ll give you a **clean, beginner-friendly, step-by-step full structure + code** so you can build it without confusion.
+
+This will be **Part 1 (Setup + Auth + Roles + OTP + Approval)**
+(We can continue next parts like Products, Orders after this)
+
+---
+
+# 1. CREATE PROJECT
+
+```bash
+composer create-project laravel/laravel laravel-task
+cd laravel-task
+php artisan serve
+```
+
+---
+
+# 2. DATABASE SETUP
+
+### `.env`
+
+```env
+DB_DATABASE=laravel_task
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+```bash
+php artisan migrate
+```
+
+---
+
+# 3. CREATE MODELS & MIGRATIONS
+
+```bash
+php artisan make:model User -m
+php artisan make:model Otp -m
+```
+
+---
+
+## 3.1 USER TABLE (MODIFY)
+
+`database/migrations/xxxx_create_users_table.php`
+
+```php
+public function up()
+{
+    Schema::create('users', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('email')->unique();
+        $table->string('mobile');
+        $table->string('password');
+
+        $table->enum('role', ['admin','user'])->default('user');
+        $table->boolean('is_approved')->default(0);
+        $table->boolean('is_active')->default(1);
+
+        $table->string('profile')->nullable();
+
+        $table->timestamps();
+    });
+}
+```
+
+---
+
+## 3.2 OTP TABLE
+
+```php
+public function up()
+{
+    Schema::create('otps', function (Blueprint $table) {
+        $table->id();
+        $table->string('email');
+        $table->string('otp');
+        $table->timestamp('expires_at');
+        $table->timestamps();
+    });
+}
+```
+
+---
+
+```bash
+php artisan migrate
+```
+
+---
+
+# 4. MAILTRAP SETUP
+
+### `.env`
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_mailtrap_username
+MAIL_PASSWORD=your_mailtrap_password
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS=test@example.com
+MAIL_FROM_NAME="Laravel App"
+```
+
+---
+
+# 5. CREATE MIDDLEWARE
+
+```bash
+php artisan make:middleware AdminMiddleware
+php artisan make:middleware UserMiddleware
+```
+
+---
+
+## 5.1 ADMIN MIDDLEWARE
+
+`app/Http/Middleware/AdminMiddleware.php`
+
+```php
+public function handle($request, Closure $next)
+{
+    if(auth()->check() && auth()->user()->role == 'admin'){
+        return $next($request);
+    }
+
+    return redirect('/');
+}
+```
+
+---
+
+## 5.2 USER MIDDLEWARE
+
+```php
+public function handle($request, Closure $next)
+{
+    if(auth()->check() && auth()->user()->role == 'user'){
+        return $next($request);
+    }
+
+    return redirect('/');
+}
+```
+
+---
+
+## REGISTER MIDDLEWARE
+
+`app/Http/Kernel.php`
+
+```php
+protected $routeMiddleware = [
+    'admin' => \App\Http\Middleware\AdminMiddleware::class,
+    'user' => \App\Http\Middleware\UserMiddleware::class,
+];
+```
+
+---
+
+# 6. CREATE CONTROLLERS
+
+```bash
+php artisan make:controller AuthController
+php artisan make:controller AdminController
+php artisan make:controller UserController
+```
+
+---
+
+# 7. AUTH CONTROLLER (FULL)
+
+`app/Http/Controllers/AuthController.php`
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use App\Models\Otp;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
+
+class AuthController extends Controller
+{
+    public function loginPage(){
+        return view('auth.login');
+    }
+
+    public function registerPage(){
+        return view('auth.register');
+    }
+
+    public function register(Request $request)
+    {
+        User::create([
+            'name'=>$request->name,
+            'email'=>$request->email,
+            'mobile'=>$request->mobile,
+            'password'=>Hash::make($request->password),
+        ]);
+
+        return redirect('/')->with('success','Registered. Wait for admin approval');
+    }
+
+    public function login(Request $request)
+    {
+        $user = User::where('email',$request->email)->first();
+
+        if(!$user){
+            return back()->with('error','User not found');
+        }
+
+        if($request->role == 'admin' && $user->role != 'admin'){
+            return back()->with('error','Invalid role');
+        }
+
+        if($request->role == 'user'){
+            if(!$user->is_approved){
+                return back()->with('error','Not approved by admin');
+            }
+        }
+
+        if(Hash::check($request->password,$user->password)){
+
+            $otp = rand(100000,999999);
+
+            Otp::create([
+                'email'=>$user->email,
+                'otp'=>$otp,
+                'expires_at'=>Carbon::now()->addMinute()
+            ]);
+
+            Mail::raw("Your OTP is $otp", function($msg) use ($user){
+                $msg->to($user->email)->subject('OTP');
+            });
+
+            session(['email'=>$user->email]);
+
+            return redirect('/otp');
+        }
+
+        return back()->with('error','Wrong password');
+    }
+
+    public function otpPage(){
+        return view('auth.otp');
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $otp = Otp::where('email',session('email'))
+                  ->where('otp',$request->otp)
+                  ->first();
+
+        if(!$otp){
+            return back()->with('error','Invalid OTP');
+        }
+
+        if(Carbon::now()->gt($otp->expires_at)){
+            return back()->with('error','OTP Expired');
+        }
+
+        $user = User::where('email',session('email'))->first();
+
+        Auth::login($user);
+
+        if($user->role == 'admin'){
+            return redirect('/admin/dashboard');
+        }
+
+        return redirect('/user/dashboard');
+    }
+
+    public function logout(){
+        Auth::logout();
+        session()->flush();
+        return redirect('/');
+    }
+}
+```
+
+---
+
+# 8. ADMIN CONTROLLER
+
+```php
+namespace App\Http\Controllers;
+
+use App\Models\User;
+
+class AdminController extends Controller
+{
+    public function dashboard(){
+        return view('admin.dashboard');
+    }
+
+    public function unverified(){
+        $users = User::where('is_approved',0)->get();
+        return view('admin.unverified',compact('users'));
+    }
+
+    public function approve($id){
+        User::find($id)->update(['is_approved'=>1]);
+        return back();
+    }
+}
+```
+
+---
+
+# 9. USER CONTROLLER
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+
+class UserController extends Controller
+{
+    public function dashboard(){
+        return view('user.dashboard');
+    }
+
+    public function profile(){
+        return view('user.profile');
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        if($request->hasFile('profile')){
+            $file = $request->file('profile')->store('profiles','public');
+            $user->profile = $file;
+        }
+
+        $user->name = $request->name;
+        $user->mobile = $request->mobile;
+        $user->save();
+
+        return back();
+    }
+
+    public function changePassword(Request $request)
+    {
+        $user = Auth::user();
+
+        if(!Hash::check($request->current,$user->password)){
+            return back()->with('error','Wrong current password');
+        }
+
+        $user->password = Hash::make($request->new);
+        $user->save();
+
+        return back()->with('success','Password updated');
+    }
+}
+```
+
+---
+
+# 10. ROUTES
+
+`routes/web.php`
+
+```php
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\UserController;
+
+Route::get('/',[AuthController::class,'loginPage']);
+Route::get('/register',[AuthController::class,'registerPage']);
+
+Route::post('/register',[AuthController::class,'register']);
+Route::post('/login',[AuthController::class,'login']);
+
+Route::get('/otp',[AuthController::class,'otpPage']);
+Route::post('/otp',[AuthController::class,'verifyOtp']);
+
+Route::get('/logout',[AuthController::class,'logout']);
+
+
+// ADMIN
+Route::middleware(['auth','admin'])->group(function(){
+
+    Route::get('/admin/dashboard',[AdminController::class,'dashboard']);
+    Route::get('/admin/unverified',[AdminController::class,'unverified']);
+    Route::get('/admin/approve/{id}',[AdminController::class,'approve']);
+
+});
+
+// USER
+Route::middleware(['auth','user'])->group(function(){
+
+    Route::get('/user/dashboard',[UserController::class,'dashboard']);
+    Route::get('/user/profile',[UserController::class,'profile']);
+    Route::post('/user/profile',[UserController::class,'updateProfile']);
+    Route::post('/user/change-password',[UserController::class,'changePassword']);
+
+});
+```
+
+---
+
+# 11. BASIC BLADE FILES
+
+## 11.1 LOGIN
+
+`resources/views/auth/login.blade.php`
+
+```blade
+<form method="POST" action="/login">
+@csrf
+
+<select name="role">
+    <option value="admin">Admin</option>
+    <option value="user">User</option>
+</select>
+
+<input type="email" name="email" placeholder="Email">
+<input type="password" name="password" placeholder="Password">
+
+<button type="submit">Login</button>
+
+</form>
+```
+
+---
+
+## 11.2 REGISTER
+
+```blade
+<form method="POST" action="/register">
+@csrf
+
+<input type="text" name="name" placeholder="Name">
+<input type="email" name="email">
+<input type="text" name="mobile">
+<input type="password" name="password">
+
+<button>Register</button>
+
+</form>
+```
+
+---
+
+## 11.3 OTP
+
+```blade
+<form method="POST" action="/otp">
+@csrf
+<input type="text" name="otp" placeholder="Enter OTP">
+<button>Verify</button>
+</form>
+```
+
+---
+
+## 11.4 ADMIN DASHBOARD
+
+```blade
+<h1>Admin Dashboard</h1>
+
+<a href="/admin/unverified">Unverified Users</a>
+<a href="/logout">Logout</a>
+```
+
+---
+
+## 11.5 UNVERIFIED USERS
+
+```blade
+@foreach($users as $user)
+
+<p>{{ $user->name }}</p>
+<a href="/admin/approve/{{ $user->id }}">Approve</a>
+
+@endforeach
+```
+
+---
+
+## 11.6 USER DASHBOARD
+
+```blade
+<h1>User Dashboard</h1>
+
+<a href="/user/profile">Profile</a>
+<a href="/logout">Logout</a>
+```
+
+---
+
+## 11.7 PROFILE
+
+```blade
+<form method="POST" action="/user/profile" enctype="multipart/form-data">
+@csrf
+
+<input type="file" name="profile">
+<input type="text" name="name" value="{{ auth()->user()->name }}">
+<input type="text" name="mobile" value="{{ auth()->user()->mobile }}">
+
+<button>Update</button>
+</form>
+
+<form method="POST" action="/user/change-password">
+@csrf
+
+<input type="password" name="current" placeholder="Current">
+<input type="password" name="new" placeholder="New">
+
+<button>Change Password</button>
+
+</form>
+```
+
+---
+
+# DONE (PART 1)
+
+You now have:
+
+* Role-based login
+* OTP email verification
+* Admin approval system
+* Middleware protection
+* User profile & password change
+* Session handling
+
+---
+
+# NEXT STEP (IMPORTANT)
+
+Next I can give:
+
+**Part 2**
+
+* Categories
+* Products (CRUD)
+* Image upload
+* Category-wise listing
+
+**Part 3**
+
+* Cart
+* Orders
+* Order approval workflow
+
+---
+
+Tell me:
+
+"Continue Part 2"
+
+and I’ll build full **Product + Category system with Blade + Controller + Migration** step by step.
