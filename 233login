@@ -1,0 +1,231 @@
+Good decision. Focus only on **Login Page (Admin + User)** today — keep it simple and working perfectly.
+
+I’ll give you a **minimal, clean implementation (step-by-step + full code)** only for login.
+
+---
+
+# 1. REQUIREMENT (TODAY TARGET)
+
+* Single login page
+* Dropdown → Admin / User
+* Validate:
+
+  * Email
+  * Password
+  * Role check
+* Redirect:
+
+  * Admin → `/admin/dashboard`
+  * User → `/user/dashboard`
+
+(No OTP today — keep it simple first)
+
+---
+
+# 2. DATABASE (IMPORTANT CHECK)
+
+Make sure your `users` table has:
+
+```php
+$table->string('email')->unique();
+$table->string('password');
+$table->enum('role',['admin','user'])->default('user');
+```
+
+---
+
+# 3. CREATE ADMIN USER (MANUALLY)
+
+Run this in **tinker**:
+
+```bash
+php artisan tinker
+```
+
+```php
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+User::create([
+    'name' => 'Admin',
+    'email' => 'admin@gmail.com',
+    'mobile' => '9999999999',
+    'password' => Hash::make('123456'),
+    'role' => 'admin',
+    'is_approved' => 1
+]);
+```
+
+---
+
+# 4. ROUTES
+
+`routes/web.php`
+
+```php
+use App\Http\Controllers\AuthController;
+
+Route::get('/', [AuthController::class,'loginPage']);
+Route::post('/login', [AuthController::class,'login']);
+
+Route::get('/admin/dashboard', function () {
+    return "Admin Dashboard";
+});
+
+Route::get('/user/dashboard', function () {
+    return "User Dashboard";
+});
+```
+
+---
+
+# 5. AUTH CONTROLLER (LOGIN ONLY)
+
+`app/Http/Controllers/AuthController.php`
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+class AuthController extends Controller
+{
+    public function loginPage()
+    {
+        return view('auth.login');
+    }
+
+    public function login(Request $request)
+    {
+        $user = User::where('email', $request->email)->first();
+
+        if(!$user){
+            return back()->with('error','User not found');
+        }
+
+        // Role check
+        if($request->role != $user->role){
+            return back()->with('error','Role mismatch');
+        }
+
+        // Password check
+        if(!Hash::check($request->password, $user->password)){
+            return back()->with('error','Wrong password');
+        }
+
+        // Redirect
+        if($user->role == 'admin'){
+            return redirect('/admin/dashboard');
+        }
+
+        return redirect('/user/dashboard');
+    }
+}
+```
+
+---
+
+# 6. LOGIN BLADE (IMPORTANT UI)
+
+`resources/views/auth/login.blade.php`
+
+```blade
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+
+<h2>Login</h2>
+
+@if(session('error'))
+    <p style="color:red">{{ session('error') }}</p>
+@endif
+
+<form method="POST" action="/login">
+    @csrf
+
+    <label>Role</label>
+    <select name="role">
+        <option value="admin">Admin</option>
+        <option value="user">User</option>
+    </select>
+
+    <br><br>
+
+    <label>Email</label>
+    <input type="email" name="email" required>
+
+    <br><br>
+
+    <label>Password</label>
+    <input type="password" name="password" required>
+
+    <br><br>
+
+    <button type="submit">Login</button>
+
+</form>
+
+</body>
+</html>
+```
+
+---
+
+# 7. TEST CASES (VERY IMPORTANT)
+
+Test all cases:
+
+### 1. Correct Admin Login
+
+* [admin@gmail.com](mailto:admin@gmail.com) / 123456 / admin
+  → Admin Dashboard
+
+### 2. Wrong Role
+
+* [admin@gmail.com](mailto:admin@gmail.com) / 123456 / user
+  → Role mismatch
+
+### 3. Wrong Password
+
+→ Wrong password
+
+### 4. User Login
+
+(Create a normal user and test)
+
+---
+
+# 8. COMMON BEGINNER MISTAKES
+
+Avoid these:
+
+* Not hashing password → must use `Hash::make`
+* Role spelling mismatch → `admin` / `user`
+* Missing `@csrf` → form won’t work
+* Not checking user exists
+
+---
+
+# TODAY GOAL (CLEAR)
+
+Finish:
+
+* Login UI working
+* Role-based redirect working
+* Error messages working
+
+---
+
+Once this is stable, next step is:
+
+👉 Add **Session + Middleware (protect routes properly)**
+👉 Then **OTP + Admin Approval**
+
+---
+
+If you get any error, send screenshot — I’ll debug it with you.
