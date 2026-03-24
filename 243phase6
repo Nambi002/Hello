@@ -1,0 +1,243 @@
+
+
+#  PHASE 6: Orders (User + Admin + Pagination + Details)
+
+
+
+# Step 1: Define Relationships (IMPORTANT)
+
+ `Order.php`
+
+```php
+public function items()
+{
+    return $this->hasMany(OrderItem::class);
+}
+
+public function user()
+{
+    return $this->belongsTo(User::class);
+}
+```
+
+---
+
+ `OrderItem.php`
+
+```php
+public function product()
+{
+    return $this->belongsTo(Product::class);
+}
+```
+
+---
+
+#  Step 2: Routes
+
+ `web.php`
+
+```php
+use App\Http\Controllers\OrderController;
+
+Route::middleware('auth')->group(function () {
+
+    // User
+    Route::get('/my-orders', [OrderController::class, 'myOrders']);
+    Route::get('/order-details/{id}', [OrderController::class, 'orderDetails']);
+
+    // Admin
+    Route::get('/admin/orders', [OrderController::class, 'adminOrders']);
+});
+```
+
+---
+
+#  Step 3: Create Controller
+
+```bash
+php artisan make:controller OrderController
+```
+
+---
+
+#  Step 4: Controller Logic
+
+ `OrderController.php`
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Order;
+use Illuminate\Support\Facades\Auth;
+
+class OrderController extends Controller
+{
+    // USER: My Orders
+    public function myOrders()
+    {
+        $orders = Order::where('user_id', Auth::id())
+                        ->latest()
+                        ->paginate(5);
+
+        return view('orders.my-orders', compact('orders'));
+    }
+
+    // USER: Order Details
+    public function orderDetails($id)
+    {
+        $order = Order::with('items.product')->findOrFail($id);
+
+        return view('orders.details', compact('order'));
+    }
+
+    // ADMIN: All Orders
+    public function adminOrders()
+    {
+        $orders = Order::with('user')
+                        ->latest()
+                        ->paginate(10);
+
+        return view('admin.orders.index', compact('orders'));
+    }
+}
+```
+
+---
+
+#  Step 5: My Orders UI
+
+ `resources/views/orders/my-orders.blade.php`
+
+```html
+<h2>My Orders</h2>
+
+@foreach($orders as $order)
+<div style="border:1px solid black; margin:10px; padding:10px;">
+    
+    <p><b>Order ID:</b> {{ $order->id }}</p>
+    <p><b>Total:</b> {{ $order->total_amount }}</p>
+
+    <a href="/order-details/{{ $order->id }}">View Details</a>
+</div>
+@endforeach
+
+{{ $orders->links() }}
+```
+
+---
+
+# Step 6: Order Details UI
+
+ `resources/views/orders/details.blade.php`
+
+```html
+<h2>Order Details</h2>
+
+<p><b>Order ID:</b> {{ $order->id }}</p>
+<p><b>Total:</b> {{ $order->total_amount }}</p>
+<p><b>Address:</b> {{ $order->address }}</p>
+
+<hr>
+
+<h3>Products</h3>
+
+@foreach($order->items as $item)
+<div style="border:1px solid gray; margin:10px; padding:10px;">
+    <p>{{ $item->product->name }}</p>
+    <p>Qty: {{ $item->quantity }}</p>
+    <p>Price: {{ $item->price }}</p>
+</div>
+@endforeach
+```
+
+---
+
+# Step 7: Admin Orders UI
+
+ `resources/views/admin/orders/index.blade.php`
+
+```html
+@extends('admin.layout')
+
+@section('content')
+
+<h2>All Orders</h2>
+
+<table border="1">
+<tr>
+    <th>ID</th>
+    <th>User</th>
+    <th>Total</th>
+    <th>Action</th>
+</tr>
+
+@foreach($orders as $order)
+<tr>
+    <td>{{ $order->id }}</td>
+    <td>{{ $order->user->name }}</td>
+    <td>{{ $order->total_amount }}</td>
+    <td>
+        <a href="/order-details/{{ $order->id }}">View</a>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+{{ $orders->links() }}
+
+@endsection
+```
+
+---
+
+# 🔍 Step 8: Add Sorting (Optional)
+
+Update `adminOrders()`:
+
+```php
+public function adminOrders(Request $request)
+{
+    $orders = Order::with('user')
+        ->when($request->sort == 'asc', fn($q) => $q->orderBy('total_amount', 'asc'))
+        ->when($request->sort == 'desc', fn($q) => $q->orderBy('total_amount', 'desc'))
+        ->latest()
+        ->paginate(10);
+
+    return view('admin.orders.index', compact('orders'));
+}
+```
+
+---
+
+# Add Sorting UI
+
+```html
+<a href="?sort=asc">Sort Low to High</a>
+<a href="?sort=desc">Sort High to Low</a>
+```
+
+---
+
+#  Step 9: Security Fix (VERY IMPORTANT)
+
+ Prevent users viewing others’ orders
+
+Update:
+
+```php
+public function orderDetails($id)
+{
+    $order = Order::with('items.product')->findOrFail($id);
+
+    if ($order->user_id != Auth::id()) {
+        abort(403);
+    }
+
+    return view('orders.details', compact('order'));
+}
+```
+
+---
