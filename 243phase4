@@ -1,0 +1,324 @@
+
+
+---
+
+# PHASE 4: Categories + Products + Listing + Filtering
+
+
+---
+
+#  Step 1: Create Category Migration
+
+```bash
+php artisan make:model Category -m
+```
+
+---
+
+###  Migration
+
+```php
+public function up()
+{
+    Schema::create('categories', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->foreignId('parent_id')->nullable()->constrained('categories')->onDelete('cascade');
+        $table->timestamps();
+    });
+}
+```
+
+ `parent_id = null` → Main Category
+ `parent_id != null` → Sub Category
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+#  Step 2: Create Product Migration
+
+```bash
+php artisan make:model Product -m
+```
+
+---
+
+### Migration
+
+```php
+public function up()
+{
+    Schema::create('products', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('sku');
+        $table->decimal('price', 10, 2);
+        $table->text('short_description')->nullable();
+        $table->longText('long_description')->nullable();
+        $table->integer('stock');
+        $table->integer('saleable_quantity')->nullable();
+        $table->foreignId('category_id')->constrained()->onDelete('cascade');
+        $table->timestamps();
+    });
+}
+```
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+#  Step 3: Models Relationship
+
+###  `Category.php`
+
+```php
+public function parent()
+{
+    return $this->belongsTo(Category::class, 'parent_id');
+}
+
+public function children()
+{
+    return $this->hasMany(Category::class, 'parent_id');
+}
+```
+
+---
+
+###  `Product.php`
+
+```php
+public function category()
+{
+    return $this->belongsTo(Category::class);
+}
+```
+
+---
+
+#  Step 4: Create Controller
+
+```bash
+php artisan make:controller CategoryController
+php artisan make:controller ProductController
+```
+
+---
+
+#  Step 5: Routes
+
+ `web.php`
+
+```php
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
+
+// Category
+Route::get('/admin/categories', [CategoryController::class, 'index']);
+Route::post('/admin/categories', [CategoryController::class, 'store']);
+
+// Product
+Route::get('/admin/products', [ProductController::class, 'index']);
+Route::get('/admin/products/create', [ProductController::class, 'create']);
+Route::post('/admin/products/store', [ProductController::class, 'store']);
+```
+
+---
+
+#  Step 6: Category UI (Admin)
+
+ `resources/views/admin/categories.blade.php`
+
+```html
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Add Category</h3>
+
+<form method="POST" action="/admin/categories">
+    @csrf
+
+    <input type="text" name="name" placeholder="Category Name" required>
+
+    <select name="parent_id">
+        <option value="">Main Category</option>
+        @foreach($categories as $cat)
+            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+        @endforeach
+    </select>
+
+    <button type="submit">Save</button>
+</form>
+
+<hr>
+
+<h3>Category List</h3>
+
+<ul>
+@foreach($categories as $cat)
+    <li>
+        {{ $cat->name }}
+        @if($cat->parent)
+            (Sub of {{ $cat->parent->name }})
+        @endif
+    </li>
+@endforeach
+</ul>
+
+@endsection
+```
+
+---
+
+#  Step 7: Category Controller
+
+```php
+use App\Models\Category;
+
+public function index()
+{
+    $categories = Category::all();
+    return view('admin.categories', compact('categories'));
+}
+
+public function store(Request $request)
+{
+    Category::create([
+        'name' => $request->name,
+        'parent_id' => $request->parent_id
+    ]);
+
+    return back();
+}
+```
+
+---
+
+#  Step 8: Product Create UI
+
+`resources/views/admin/products/create.blade.php`
+
+```html
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Add Product</h3>
+
+<form method="POST" action="/admin/products/store">
+    @csrf
+
+    <input type="text" name="name" placeholder="Name"><br><br>
+    <input type="text" name="sku" placeholder="SKU"><br><br>
+    <input type="number" name="price" placeholder="Price"><br><br>
+    <input type="number" name="stock" placeholder="Stock"><br><br>
+
+    <textarea name="short_description" placeholder="Short Desc"></textarea><br><br>
+
+    <select name="category_id">
+        @foreach($categories as $cat)
+            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+        @endforeach
+    </select>
+
+    <button type="submit">Save</button>
+</form>
+
+@endsection
+```
+
+---
+
+#  Step 9: Product Controller
+
+```php
+use App\Models\Product;
+use App\Models\Category;
+
+public function index()
+{
+    $products = Product::with('category')->get();
+    return view('admin.products.index', compact('products'));
+}
+
+public function create()
+{
+    $categories = Category::all();
+    return view('admin.products.create', compact('categories'));
+}
+
+public function store(Request $request)
+{
+    Product::create($request->all());
+    return redirect('/admin/products');
+}
+```
+
+---
+
+#Step 10: User Product Listing
+
+ Route:
+
+```php
+Route::get('/products', [ProductController::class, 'userProducts']);
+```
+
+---
+
+### Controller
+
+```php
+public function userProducts(Request $request)
+{
+    $categories = Category::whereNull('parent_id')->get();
+
+    $products = Product::when($request->category_id, function ($q) use ($request) {
+        $q->where('category_id', $request->category_id);
+    })->get();
+
+    return view('products', compact('products', 'categories'));
+}
+```
+
+---
+
+# Step 11: User UI (Filtering)
+
+ `resources/views/products.blade.php`
+
+```html
+<h2>Products</h2>
+
+<form method="GET">
+    <select name="category_id" onchange="this.form.submit()">
+        <option value="">All</option>
+        @foreach($categories as $cat)
+            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+        @endforeach
+    </select>
+</form>
+
+<hr>
+
+@foreach($products as $product)
+    <div style="border:1px solid #000; margin:10px; padding:10px;">
+        <h3>{{ $product->name }}</h3>
+        <p>Price: {{ $product->price }}</p>
+        <p>{{ $product->short_description }}</p>
+    </div>
+@endforeach
+```
+
+---
+
