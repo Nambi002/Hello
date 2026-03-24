@@ -1,0 +1,255 @@
+
+
+###  Phase 1 (Start here)
+
+* Laravel setup
+* Database setup
+* Common login (Admin/User dropdown)
+* Basic UI (Blade)
+
+### Phase 2
+
+* User registration + Admin approval system
+
+### Phase 3
+
+* OTP login (Mailtrap)
+
+### Phase 4
+
+* Product + Category module
+
+### Phase 5
+
+* Cart + Checkout + Address
+
+### Phase 6
+
+* Orders system
+
+### Phase 7
+
+* Middleware + Security + polish
+
+---
+
+#  PHASE 1: Laravel Setup + Common Login System
+
+---
+
+## Step 1: Install Laravel
+
+```bash
+composer create-project laravel/laravel ecommerce-app
+cd ecommerce-app
+php artisan serve
+```
+
+---
+
+## Step 2: Setup Database
+
+In `.env`:
+
+```env
+DB_DATABASE=ecommerce
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Then:
+
+```bash
+php artisan migrate
+```
+
+---
+
+## Step 3: Create Users Table (Modify)
+
+```bash
+php artisan make:migration add_role_status_to_users_table
+```
+
+Edit migration:
+
+```php
+public function up()
+{
+    Schema::table('users', function (Blueprint $table) {
+        $table->enum('role', ['admin', 'user'])->default('user');
+        $table->boolean('is_approved')->default(false);
+    });
+}
+```
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+##  Step 4: Create Auth Controller
+
+```bash
+php artisan make:controller AuthController
+```
+
+---
+
+## Step 5: Routes
+
+ `routes/web.php`
+
+```php
+use App\Http\Controllers\AuthController;
+
+Route::get('/', [AuthController::class, 'showLogin']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/dashboard', [AuthController::class, 'dashboard'])->middleware('auth');
+Route::get('/logout', [AuthController::class, 'logout']);
+```
+
+---
+
+## Step 6: Login UI (Blade)
+
+ `resources/views/login.blade.php`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+
+<h2>Login</h2>
+
+<form method="POST" action="/login">
+    @csrf
+
+    <label>Select Role:</label>
+    <select name="role">
+        <option value="admin">Admin</option>
+        <option value="user">User</option>
+    </select>
+
+    <br><br>
+
+    <label>Email:</label>
+    <input type="email" name="email" required>
+
+    <br><br>
+
+    <label>Password:</label>
+    <input type="password" name="password" required>
+
+    <br><br>
+
+    <button type="submit">Login</button>
+</form>
+
+</body>
+</html>
+```
+
+---
+
+##  Step 7: Controller Logic
+
+ `app/Http/Controllers/AuthController.php`
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+
+class AuthController extends Controller
+{
+    public function showLogin()
+    {
+        return view('login');
+    }
+
+    public function login(Request $request)
+    {
+        $credentials = $request->only('email', 'password');
+
+        $user = User::where('email', $request->email)
+                    ->where('role', $request->role)
+                    ->first();
+
+        if (!$user) {
+            return back()->with('error', 'Invalid role or user');
+        }
+
+        // Check approval for users
+        if ($user->role == 'user' && !$user->is_approved) {
+            return back()->with('error', 'User not approved by admin');
+        }
+
+        if (Auth::attempt($credentials)) {
+
+            if ($user->role == 'admin') {
+                return redirect('/admin-dashboard');
+            } else {
+                return redirect('/user-dashboard');
+            }
+        }
+
+        return back()->with('error', 'Invalid credentials');
+    }
+
+    public function dashboard()
+    {
+        return "Dashboard";
+    }
+
+    public function logout()
+    {
+        Auth::logout();
+        return redirect('/');
+    }
+}
+```
+
+---
+
+##  Step 8: Create Dashboards
+
+###  `resources/views/admin-dashboard.blade.php`
+
+```html
+<h1>Admin Dashboard</h1>
+<a href="/logout">Logout</a>
+```
+
+###  `resources/views/user-dashboard.blade.php`
+
+```html
+<h1>User Dashboard</h1>
+<a href="/logout">Logout</a>
+```
+
+---
+
+## Add Routes
+
+```php
+Route::get('/admin-dashboard', function () {
+    return view('admin-dashboard');
+})->middleware('auth');
+
+Route::get('/user-dashboard', function () {
+    return view('user-dashboard');
+})->middleware('auth');
+```
+
+---
+
+
