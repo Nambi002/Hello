@@ -1,0 +1,240 @@
+ PHASE 3: Email OTP Login (Mailtrap) + Expiry
+
+---
+
+#  What We’ll Build
+
+ After entering email/password:
+
+1. Generate OTP
+2. Send OTP via email (Mailtrap)
+3. Redirect to OTP page
+4. Verify OTP (valid for 1 minute)
+5. Login success
+
+---
+
+#  Step 1: Mailtrap Setup
+
+###  `.env`
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_mailtrap_username
+MAIL_PASSWORD=your_mailtrap_password
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS=test@example.com
+MAIL_FROM_NAME="Laravel App"
+```
+
+ Get credentials from Mailtrap website
+
+---
+
+# Step 2: Add OTP Fields in Users Table
+
+```bash
+php artisan make:migration add_otp_to_users_table
+```
+
+### Migration:
+
+```php
+public function up()
+{
+    Schema::table('users', function (Blueprint $table) {
+        $table->string('otp')->nullable();
+        $table->timestamp('otp_expires_at')->nullable();
+    });
+}
+```
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+#  Step 3: Create Mail Class
+
+```bash
+php artisan make:mail SendOtpMail
+```
+
+---
+
+###  `app/Mail/SendOtpMail.php`
+
+```php
+namespace App\Mail;
+
+use Illuminate\Mail\Mailable;
+
+class SendOtpMail extends Mailable
+{
+    public $otp;
+
+    public function __construct($otp)
+    {
+        $this->otp = $otp;
+    }
+
+    public function build()
+    {
+        return $this->subject('Your OTP Code')
+                    ->view('emails.otp');
+    }
+}
+```
+
+---
+
+###  `resources/views/emails/otp.blade.php`
+
+```html
+<h2>Your OTP Code</h2>
+<p>Your OTP is: <b>{{ $otp }}</b></p>
+<p>Valid for 1 minute</p>
+```
+
+---
+
+#  Step 4: Update Login Logic
+
+`AuthController.php`
+
+```php
+use Illuminate\Support\Facades\Mail;
+use App\Mail\SendOtpMail;
+use Carbon\Carbon;
+
+public function login(Request $request)
+{
+    $user = User::where('email', $request->email)
+                ->where('role', $request->role)
+                ->first();
+
+    if (!$user) {
+        return back()->with('error', 'Invalid user');
+    }
+
+    if ($user->role == 'user' && !$user->is_approved) {
+        return back()->with('error', 'Not approved');
+    }
+
+    if (!\Hash::check($request->password, $user->password)) {
+        return back()->with('error', 'Wrong password');
+    }
+
+    // Generate OTP
+    $otp = rand(100000, 999999);
+
+    $user->otp = $otp;
+    $user->otp_expires_at = Carbon::now()->addMinute();
+    $user->save();
+
+    // Send Mail
+    Mail::to($user->email)->send(new SendOtpMail($otp));
+
+    // Store user id in session
+    session(['otp_user_id' => $user->id]);
+
+    return redirect('/otp');
+}
+```
+
+---
+
+#  Step 5: OTP Routes
+
+ `web.php`
+
+```php
+Route::get('/otp', [AuthController::class, 'showOtp']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+```
+
+---
+
+# Step 6: OTP UI
+
+ `resources/views/otp.blade.php`
+
+```html
+<h2>Enter OTP</h2>
+
+<form method="POST" action="/verify-otp">
+    @csrf
+
+    <input type="text" name="otp" placeholder="Enter OTP" required>
+
+    <br><br>
+
+    <button type="submit">Verify OTP</button>
+</form>
+```
+
+---
+
+#  Step 7: Verify OTP Logic
+
+ `AuthController.php`
+
+```php
+use Illuminate\Support\Facades\Auth;
+
+public function showOtp()
+{
+    return view('otp');
+}
+
+public function verifyOtp(Request $request)
+{
+    $user = User::find(session('otp_user_id'));
+
+    if (!$user) {
+        return redirect('/')->with('error', 'Session expired');
+    }
+
+    // Check OTP
+    if ($user->otp != $request->otp) {
+        return back()->with('error', 'Invalid OTP');
+    }
+
+    // Check Expiry
+    if (Carbon::now()->gt($user->otp_expires_at)) {
+        return back()->with('error', 'OTP expired');
+    }
+
+    // Login user
+    Auth::login($user);
+
+    // Clear OTP
+    $user->otp = null;
+    $user->otp_expires_at = null;
+    $user->save();
+
+    // Redirect
+    if ($user->role == 'admin') {
+        return redirect('/admin-dashboard');
+    } else {
+        return redirect('/user-dashboard');
+    }
+}
+```
+
+---
+
+#  Step 8: Security Improvements (IMPORTANT)
+
+Add this inside `verifyOtp()`:
+
+```php
+session()->forget('otp_user_id');
+```
+
+---
