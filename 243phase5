@@ -1,0 +1,324 @@
+
+
+#  PHASE 5: Cart + Checkout + Address + Order
+
+
+
+#  Step 1: Create Cart Table
+
+```bash
+php artisan make:model Cart -m
+```
+
+---
+
+###  Migration
+
+```php
+public function up()
+{
+    Schema::create('carts', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        $table->foreignId('product_id')->constrained()->onDelete('cascade');
+        $table->integer('quantity')->default(1);
+        $table->timestamps();
+    });
+}
+```
+
+```bash
+php artisan migrate
+```
+
+---
+
+#  Step 2: Create Order Tables
+
+```bash
+php artisan make:model Order -m
+php artisan make:model OrderItem -m
+```
+
+---
+
+###  Orders Table
+
+```php
+Schema::create('orders', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('user_id')->constrained()->onDelete('cascade');
+    $table->decimal('total_amount', 10, 2);
+    $table->text('address');
+    $table->timestamps();
+});
+```
+
+---
+
+###  Order Items
+
+```php
+Schema::create('order_items', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('order_id')->constrained()->onDelete('cascade');
+    $table->foreignId('product_id')->constrained()->onDelete('cascade');
+    $table->integer('quantity');
+    $table->decimal('price', 10, 2);
+    $table->timestamps();
+});
+```
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+#  Step 3: Create Address Table
+
+```bash
+php artisan make:model Address -m
+```
+
+---
+
+###  Migration
+
+```php
+Schema::create('addresses', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('user_id')->constrained()->onDelete('cascade');
+    $table->string('name');
+    $table->string('email');
+    $table->string('mobile');
+    $table->string('address1');
+    $table->string('address2')->nullable();
+    $table->string('city');
+    $table->string('state');
+    $table->string('country');
+    $table->string('pincode');
+    $table->timestamps();
+});
+```
+
+```bash
+php artisan migrate
+```
+
+---
+
+#  Step 4: Cart Controller
+
+```bash
+php artisan make:controller CartController
+```
+
+---
+
+#  Routes
+
+```php
+use App\Http\Controllers\CartController;
+
+Route::middleware('auth')->group(function () {
+    Route::get('/add-to-cart/{id}', [CartController::class, 'add']);
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::get('/remove-cart/{id}', [CartController::class, 'remove']);
+});
+```
+
+---
+
+# Cart Logic
+
+```php
+use App\Models\Cart;
+use App\Models\Product;
+use Illuminate\Support\Facades\Auth;
+
+public function add($id)
+{
+    $cart = Cart::where('user_id', Auth::id())
+                ->where('product_id', $id)
+                ->first();
+
+    if ($cart) {
+        $cart->quantity += 1;
+        $cart->save();
+    } else {
+        Cart::create([
+            'user_id' => Auth::id(),
+            'product_id' => $id,
+            'quantity' => 1
+        ]);
+    }
+
+    return back();
+}
+
+public function index()
+{
+    $carts = Cart::with('product')->where('user_id', Auth::id())->get();
+    return view('cart', compact('carts'));
+}
+
+public function remove($id)
+{
+    Cart::find($id)->delete();
+    return back();
+}
+```
+
+---
+
+#  Step 5: Cart UI
+
+ `resources/views/cart.blade.php`
+
+```html
+<h2>My Cart</h2>
+
+@foreach($carts as $cart)
+<div style="border:1px solid black; margin:10px; padding:10px;">
+    <h3>{{ $cart->product->name }}</h3>
+    <p>Qty: {{ $cart->quantity }}</p>
+    <p>Price: {{ $cart->product->price }}</p>
+
+    <a href="/remove-cart/{{ $cart->id }}">Remove</a>
+</div>
+@endforeach
+
+<a href="/checkout">Proceed to Checkout</a>
+```
+
+---
+
+#  Step 6: Checkout Controller
+
+```bash
+php artisan make:controller CheckoutController
+```
+
+---
+
+#  Routes
+
+```php
+use App\Http\Controllers\CheckoutController;
+
+Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('auth');
+Route::post('/place-order', [CheckoutController::class, 'placeOrder'])->middleware('auth');
+```
+
+---
+
+#  Checkout Logic
+
+```php
+use App\Models\Address;
+use App\Models\Order;
+use App\Models\OrderItem;
+
+public function index()
+{
+    $addresses = Address::where('user_id', Auth::id())->get();
+    $carts = Cart::with('product')->where('user_id', Auth::id())->get();
+
+    return view('checkout', compact('addresses', 'carts'));
+}
+```
+
+---
+
+#  Step 7: Checkout UI
+
+```html
+<h2>Checkout</h2>
+
+
+
+
+
+
+<form method="POST" action="/place-order">
+@csrf
+
+<h3>Select Address</h3>
+
+@foreach($addresses as $address)
+    <input type="radio" name="address_id" value="{{ $address->id }}">
+    {{ $address->address1 }}<br>
+@endforeach
+
+<h3>Or Add New</h3>
+
+<input type="text" name="address1" placeholder="Address"><br>
+
+<h3>Cart Items</h3>
+
+@foreach($carts as $cart)
+    <p>{{ $cart->product->name }} - {{ $cart->quantity }}</p>
+@endforeach
+
+<button type="submit">Place Order</button>
+
+</form>
+```
+
+---
+
+# Step 8: Place Order Logic
+
+```php
+public function placeOrder(Request $request)
+{
+    $carts = Cart::with('product')->where('user_id', Auth::id())->get();
+
+    $total = 0;
+
+    foreach ($carts as $cart) {
+        $total += $cart->product->price * $cart->quantity;
+    }
+
+    $order = Order::create([
+        'user_id' => Auth::id(),
+        'total_amount' => $total,
+        'address' => $request->address1 ?? 'Saved Address'
+    ]);
+
+    foreach ($carts as $cart) {
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $cart->product_id,
+            'quantity' => $cart->quantity,
+            'price' => $cart->product->price
+        ]);
+
+        // Reduce stock
+        $product = $cart->product;
+        $product->stock -= $cart->quantity;
+        $product->save();
+    }
+
+    // Clear cart
+    Cart::where('user_id', Auth::id())->delete();
+
+    return redirect('/user-dashboard')->with('success', 'Order Placed!');
+}
+```
+
+---
+
+# Step 9: Add "Add to Cart" Button
+
+ `products.blade.php`
+
+```html
+<a href="/add-to-cart/{{ $product->id }}">Add to Cart</a>
+```
+
+---
+
