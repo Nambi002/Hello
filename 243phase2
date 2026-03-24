@@ -1,0 +1,351 @@
+
+
+---
+
+# PHASE 2: User Registration + Admin Approval + Admin Panel
+
+---
+
+#  Step 1: Create Registration Route
+
+ `routes/web.php`
+
+```php
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
+
+Route::get('/register', [AuthController::class, 'showRegister']);
+Route::post('/register', [AuthController::class, 'register']);
+
+// Admin routes
+Route::get('/admin/customers/unverified', [AdminController::class, 'unverified'])->middleware('auth');
+Route::get('/admin/customers/verified', [AdminController::class, 'verified'])->middleware('auth');
+Route::get('/admin/customers/inactive', [AdminController::class, 'inactive'])->middleware('auth');
+
+Route::get('/admin/approve-user/{id}', [AdminController::class, 'approveUser']);
+Route::get('/admin/inactivate-user/{id}', [AdminController::class, 'inactivateUser']);
+```
+
+---
+
+#  Step 2: Create Controller
+
+```bash
+php artisan make:controller AdminController
+```
+
+---
+
+#  Step 3: Registration UI (Full Form)
+
+ `resources/views/register.blade.php`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+</head>
+<body>
+
+<h2>User Registration</h2>
+
+<form method="POST" action="/register">
+    @csrf
+
+    <label>Name:</label>
+    <input type="text" name="name" required>
+    <br><br>
+
+    <label>Email:</label>
+    <input type="email" name="email" required>
+    <br><br>
+
+    <label>Mobile:</label>
+    <input type="text" name="mobile" required>
+    <br><br>
+
+    <label>Password:</label>
+    <input type="password" name="password" required>
+    <br><br>
+
+    <button type="submit">Register</button>
+</form>
+
+<a href="/">Back to Login</a>
+
+</body>
+</html>
+```
+
+---
+
+# Step 4: Registration Logic
+
+ `AuthController.php`
+
+```php
+use Illuminate\Support\Facades\Hash;
+
+public function showRegister()
+{
+    return view('register');
+}
+
+public function register(Request $request)
+{
+    $request->validate([
+        'name' => 'required',
+        'email' => 'required|email|unique:users',
+        'mobile' => 'required',
+        'password' => 'required|min:6',
+    ]);
+
+    User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'mobile' => $request->mobile,
+        'password' => Hash::make($request->password),
+        'role' => 'user',
+        'is_approved' => false
+    ]);
+
+    return redirect('/')->with('success', 'Registered! Wait for admin approval.');
+}
+```
+
+---
+
+# Step 5: Update User Model
+
+ `app/Models/User.php`
+
+```php
+protected $fillable = [
+    'name',
+    'email',
+    'mobile',
+    'password',
+    'role',
+    'is_approved'
+];
+```
+
+---
+
+#  Step 6: Admin Controller Logic
+
+ `AdminController.php`
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+
+class AdminController extends Controller
+{
+    public function unverified()
+    {
+        $users = User::where('role', 'user')
+                    ->where('is_approved', false)
+                    ->get();
+
+        return view('admin.unverified', compact('users'));
+    }
+
+    public function verified()
+    {
+        $users = User::where('role', 'user')
+                    ->where('is_approved', true)
+                    ->get();
+
+        return view('admin.verified', compact('users'));
+    }
+
+    public function inactive()
+    {
+        $users = User::onlyTrashed()->get();
+        return view('admin.inactive', compact('users'));
+    }
+
+    public function approveUser($id)
+    {
+        $user = User::find($id);
+        $user->is_approved = true;
+        $user->save();
+
+        return back();
+    }
+
+    public function inactivateUser($id)
+    {
+        $user = User::find($id);
+        $user->delete();
+
+        return back();
+    }
+}
+```
+
+---
+
+# IMPORTANT: Enable Soft Delete
+
+Migration:
+
+```bash
+php artisan make:migration add_deleted_at_to_users
+```
+
+```php
+$table->softDeletes();
+```
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+`User.php`
+
+```php
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class User extends Authenticatable
+{
+    use SoftDeletes;
+}
+```
+
+---
+
+#  Step 7: Admin UI (Sidebar Layout)
+
+ `resources/views/admin/layout.blade.php`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+
+<h2>Admin Panel</h2>
+
+<div style="display:flex">
+
+    <!-- Sidebar -->
+    <div style="width:200px; background:#ddd; padding:10px;">
+        <a href="/admin/customers/unverified">Unverified Users</a><br><br>
+        <a href="/admin/customers/verified">Verified Users</a><br><br>
+        <a href="/admin/customers/inactive">Inactive Users</a><br><br>
+    </div>
+
+    <!-- Content -->
+    <div style="margin-left:20px;">
+        @yield('content')
+    </div>
+
+</div>
+
+</body>
+</html>
+```
+
+---
+
+#  Step 8: Unverified Users Page
+
+ `resources/views/admin/unverified.blade.php`
+
+```html
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Unverified Users</h3>
+
+<table border="1">
+<tr>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Action</th>
+</tr>
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>
+        <a href="/admin/approve-user/{{ $user->id }}">Approve</a>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+```
+
+---
+
+# Step 9: Verified Users Page
+
+```html
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Verified Users</h3>
+
+<table border="1">
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+    <td>
+        <a href="/admin/inactivate-user/{{ $user->id }}">Inactivate</a>
+    </td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+```
+
+---
+
+#  Step 10: Inactive Users Page
+
+```html
+@extends('admin.layout')
+
+@section('content')
+
+<h3>Inactive Users</h3>
+
+<table border="1">
+
+@foreach($users as $user)
+<tr>
+    <td>{{ $user->name }}</td>
+    <td>{{ $user->email }}</td>
+</tr>
+@endforeach
+
+</table>
+
+@endsection
+```
+
+---
+
+
+
