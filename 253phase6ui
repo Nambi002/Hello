@@ -1,0 +1,218 @@
+Perfect — now let’s **upgrade Phase 6 with Bootstrap UI + clean backend **
+This will make your project look **company-level + portfolio-ready**.
+
+---
+
+#  PHASE 6 (UPGRADED): Orders System + Modern UI
+
+---
+
+#  What You’ll Build
+
+ My Orders (User UI – cards)
+ Order Details (clean layout)
+ Admin Orders Table
+ Pagination (Bootstrap styled)
+ Sorting
+
+---
+
+#  Step 1: Controller (Clean Version)
+
+`OrderController.php`
+
+```php
+public function myOrders()
+{
+    $orders = Order::where('user_id', auth()->id())
+                    ->latest()
+                    ->paginate(5);
+
+    return view('orders.my-orders', compact('orders'));
+}
+
+public function orderDetails($id)
+{
+    $order = Order::with('items.product')->findOrFail($id);
+
+    if ($order->user_id != auth()->id()) {
+        abort(403);
+    }
+
+    return view('orders.details', compact('order'));
+}
+
+public function adminOrders(Request $request)
+{
+    $orders = Order::with('user')
+        ->when($request->sort == 'asc', fn($q) => $q->orderBy('total_amount', 'asc'))
+        ->when($request->sort == 'desc', fn($q) => $q->orderBy('total_amount', 'desc'))
+        ->latest()
+        ->paginate(10);
+
+    return view('admin.orders.index', compact('orders'));
+}
+```
+
+---
+
+# Step 2: My Orders UI (Modern Cards)
+
+ `resources/views/orders/my-orders.blade.php`
+
+```html
+@extends('layouts.app')
+
+@section('content')
+
+<h3 class="mb-4">My Orders</h3>
+
+<div class="row">
+
+@foreach($orders as $order)
+<div class="col-md-6 mb-4">
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+            <h5>Order #{{ $order->id }}</h5>
+            <p class="text-muted">Total: ₹{{ $order->total_amount }}</p>
+
+            <a href="/order-details/{{ $order->id }}" class="btn btn-primary btn-sm">
+                View Details
+            </a>
+        </div>
+
+    </div>
+</div>
+@endforeach
+
+</div>
+
+<div class="mt-3">
+    {{ $orders->links('pagination::bootstrap-5') }}
+</div>
+
+@endsection
+```
+
+---
+
+#  Step 3: Order Details UI
+
+`resources/views/orders/details.blade.php`
+
+```html
+@extends('layouts.app')
+
+@section('content')
+
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        Order Details
+    </div>
+
+    <div class="card-body">
+
+        <p><strong>Order ID:</strong> {{ $order->id }}</p>
+        <p><strong>Total:</strong> ₹{{ $order->total_amount }}</p>
+        <p><strong>Address:</strong> {{ $order->address }}</p>
+
+        <hr>
+
+        <h5>Products</h5>
+
+        <table class="table table-bordered">
+            <tr>
+                <th>Name</th>
+                <th>Qty</th>
+                <th>Price</th>
+            </tr>
+
+            @foreach($order->items as $item)
+            <tr>
+                <td>{{ $item->product->name }}</td>
+                <td>{{ $item->quantity }}</td>
+                <td>₹{{ $item->price }}</td>
+            </tr>
+            @endforeach
+
+        </table>
+
+    </div>
+</div>
+
+@endsection
+```
+
+---
+
+#  Step 4: Admin Orders UI (Professional Table)
+
+ `resources/views/admin/orders/index.blade.php`
+
+```html
+@extends('admin.layout')
+
+@section('admin-content')
+
+<div class="card">
+
+    <div class="card-header d-flex justify-content-between">
+        <h5>All Orders</h5>
+
+        <div>
+            <a href="?sort=asc" class="btn btn-sm btn-outline-primary">Low → High</a>
+            <a href="?sort=desc" class="btn btn-sm btn-outline-danger">High → Low</a>
+        </div>
+    </div>
+
+    <div class="card-body">
+
+        <table class="table table-striped">
+            <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Total</th>
+                <th>Action</th>
+            </tr>
+
+            @foreach($orders as $order)
+            <tr>
+                <td>#{{ $order->id }}</td>
+                <td>{{ $order->user->name }}</td>
+                <td>₹{{ $order->total_amount }}</td>
+                <td>
+                    <a href="/order-details/{{ $order->id }}" class="btn btn-primary btn-sm">
+                        View
+                    </a>
+                </td>
+            </tr>
+            @endforeach
+
+        </table>
+
+        {{ $orders->links('pagination::bootstrap-5') }}
+
+    </div>
+</div>
+
+@endsection
+```
+
+---
+
+#  Step 5: Important Security Fix
+
+Already added but remember:
+
+```php
+if ($order->user_id != auth()->id()) {
+    abort(403);
+}
+```
+
+ Prevents users from seeing others' orders
+
+---
+
+
