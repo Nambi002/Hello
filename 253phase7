@@ -1,0 +1,261 @@
+
+
+#  PHASE 7: PRO FEATURES (Industry Level)
+
+---
+
+# What You’ll Build
+
+
+
+---
+
+#  STEP 1: Middleware (VERY IMPORTANT)
+
+##  Create Middleware
+
+```bash
+php artisan make:middleware AdminMiddleware
+php artisan make:middleware UserMiddleware
+```
+
+---
+
+##  `AdminMiddleware.php`
+
+```php
+public function handle($request, Closure $next)
+{
+    if (auth()->check() && auth()->user()->role == 'admin') {
+        return $next($request);
+    }
+
+    abort(403);
+}
+```
+
+---
+
+##  `UserMiddleware.php`
+
+```php
+public function handle($request, Closure $next)
+{
+    if (auth()->check() && auth()->user()->role == 'user') {
+        return $next($request);
+    }
+
+    return redirect('/');
+}
+```
+
+---
+
+##  Register Middleware (`Kernel.php`)
+
+```php
+'admin' => \App\Http\Middleware\AdminMiddleware::class,
+'user' => \App\Http\Middleware\UserMiddleware::class,
+```
+
+---
+
+## Use in Routes
+
+```php
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin/dashboard', fn() => view('admin.dashboard'));
+});
+
+Route::middleware(['auth', 'user'])->group(function () {
+    Route::get('/user-dashboard', fn() => view('user.dashboard'));
+});
+```
+
+---
+
+# STEP 2: Product Image Upload
+
+---
+
+##  Migration
+
+```bash
+php artisan make:migration add_image_to_products
+```
+
+```php
+$table->string('image')->nullable();
+```
+
+```bash
+php artisan migrate
+```
+
+---
+
+##  Update Product Form
+
+```html
+<form method="POST" enctype="multipart/form-data">
+```
+
+```html
+<input type="file" name="image" class="form-control">
+```
+
+---
+
+##  Controller
+
+```php
+public function store(Request $request)
+{
+    $data = $request->all();
+
+    if ($request->hasFile('image')) {
+        $file = $request->file('image');
+        $path = $file->store('products', 'public');
+        $data['image'] = $path;
+    }
+
+    Product::create($data);
+
+    return redirect('/admin/products');
+}
+```
+
+---
+
+## Show Image
+
+```html
+<img src="{{ asset('storage/' . $product->image) }}" width="100">
+```
+
+---
+
+# ⚡ STEP 3: AJAX Add to Cart (PRO FEATURE)
+
+---
+
+##  Button
+
+```html
+<button class="btn btn-warning add-to-cart" data-id="{{ $product->id }}">
+    Add to Cart
+</button>
+```
+
+---
+
+##  JS (add in layout)
+
+```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+$('.add-to-cart').click(function () {
+    let productId = $(this).data('id');
+
+    $.ajax({
+        url: '/add-to-cart/' + productId,
+        method: 'GET',
+        success: function () {
+            alert('Added to cart!');
+        }
+    });
+});
+</script>
+```
+
+---
+
+#  STEP 4: SweetAlert (Better UX)
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Added!',
+    text: 'Product added to cart'
+});
+</script>
+```
+
+ Replace `alert()` with this
+
+---
+
+# STEP 5: Forgot Password (OTP)
+
+---
+
+##  Routes
+
+```php
+Route::get('/forgot-password', [AuthController::class, 'showForgot']);
+Route::post('/send-otp', [AuthController::class, 'sendOtp']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+```
+
+---
+
+## UI
+
+```html
+<h3>Forgot Password</h3>
+
+<form method="POST" action="/send-otp">
+    @csrf
+    <input type="email" name="email" placeholder="Enter Email">
+    <button>Send OTP</button>
+</form>
+```
+
+---
+
+##  Logic
+
+```php
+public function sendOtp(Request $request)
+{
+    $user = User::where('email', $request->email)->first();
+
+    $otp = rand(100000, 999999);
+
+    $user->otp = $otp;
+    $user->otp_expires_at = now()->addMinute();
+    $user->save();
+
+    Mail::to($user->email)->send(new SendOtpMail($otp));
+
+    return back()->with('success', 'OTP sent');
+}
+```
+
+---
+
+## Reset Password
+
+```php
+public function resetPassword(Request $request)
+{
+    $user = User::where('email', $request->email)->first();
+
+    if ($user->otp != $request->otp) {
+        return back()->with('error', 'Invalid OTP');
+    }
+
+    $user->password = bcrypt($request->password);
+    $user->save();
+
+    return redirect('/');
+}
+```
+
+---
+
+
