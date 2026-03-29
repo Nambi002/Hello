@@ -1,0 +1,1277 @@
+category main / sub problem
+
+---
+
+# YOUR PROBLEM (CLEAR UNDERSTANDING)
+
+You have:
+
+```
+Mobile (Main Category)
+   └── Oppo (Sub Category)
+          └── Product: Oppo A53
+```
+
+###  Working:
+
+* Searching "Oppo" → shows product ✔
+
+### Not Working:
+
+* Clicking **Mobile (parent)** → shows **NO products**
+
+---
+
+#  WHY THIS HAPPENS
+
+Your current filter is:
+
+```php
+$q->where('category_id', $request->category_id);
+```
+
+This only gets **exact match**
+
+So:
+
+* Mobile (id=1) has NO direct products
+* Oppo (id=2) has products
+
+ So Mobile returns empty 
+
+---
+
+#  FINAL FIX (IMPORTANT )
+
+You must fetch:
+
+✔ Selected category
+✔ ALL its subcategories
+✔ Then filter products using ALL IDs
+
+---
+
+# FIX CONTROLLER (COPY THIS)
+
+ `ProductController.php`
+
+```php
+public function userProducts(Request $request)
+{
+    $categories = Category::whereNull('parent_id')
+        ->with('children')
+        ->get();
+
+    $products = Product::query();
+
+    // CATEGORY FILTER FIX
+    if ($request->category_id) {
+
+        // get selected category + its children
+        $categoryIds = Category::where('id', $request->category_id)
+            ->orWhere('parent_id', $request->category_id)
+            ->pluck('id');
+
+        $products->whereIn('category_id', $categoryIds);
+    }
+
+    // 🔍 SEARCH
+    if ($request->search) {
+        $products->where('name', 'like', '%' . $request->search . '%');
+    }
+
+    $products = $products->get();
+
+    return view('user.products', compact('products', 'categories'));
+}
+```
+
+---
+
+
+---
+
+# ADVANCED (MULTI-LEVEL SUPPORT)
+
+If you have:
+
+```
+Electronics
+   └── Mobile
+         └── Oppo
+```
+
+Then use **recursive children**
+
+Tell me → I’ll give that also 
+
+---
+
+# DEBUG TIP
+
+Temporarily print:
+
+```php
+dd($categoryIds);
+```
+ You should see:
+
+```
+[1, 2]
+```
+
+(Parent + child IDs)
+
+---
+
+# BONUS UI FIX
+
+Highlight selected category:
+
+```html
+<a href="/products?category_id={{ $cat->id }}"
+   class="{{ request('category_id') == $cat->id ? 'text-primary fw-bold' : '' }}">
+   {{ $cat->name }}
+</a>
+```
+==============================
+==============================
+==============================
+==============================
+==============================
+==============================
+==============================
+
+
+
+You asked for **FULL CODE (Controllers + Routes + Blade) for:**
+
+Cart
+Address
+Checkout
+Order + Place Order
+OTP Login
+Role (Admin/User)
+
+
+
+---
+
+#  1. ROUTES (FULL)
+
+ `routes/web.php`
+
+```php
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
+
+/* AUTH */
+Route::get('/login', [AuthController::class, 'showLogin']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/otp', [AuthController::class, 'showOtp']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::get('/logout', [AuthController::class, 'logout']);
+
+/* CART */
+Route::get('/add-to-cart/{id}', [CartController::class, 'add']);
+Route::get('/cart', [CartController::class, 'index']);
+Route::get('/cart/remove/{id}', [CartController::class, 'remove']);
+
+/* CHECKOUT */
+Route::get('/checkout', [CheckoutController::class, 'index']);
+Route::post('/save-address', [CheckoutController::class, 'saveAddress']);
+Route::post('/place-order', [CheckoutController::class, 'placeOrder']);
+
+/* ORDERS */
+Route::get('/my-orders', [OrderController::class, 'index']);
+```
+
+---
+
+#  2. OTP AUTH CONTROLLER
+
+ `AuthController.php`
+
+```php
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
+
+public function login(Request $request)
+{
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return back()->with('error', 'Invalid credentials');
+    }
+
+    $otp = rand(100000, 999999);
+
+    $user->update([
+        'otp' => $otp,
+        'otp_expires_at' => now()->addMinute()
+    ]);
+
+    Mail::raw("Your OTP is: $otp", function ($msg) use ($user) {
+        $msg->to($user->email)->subject('OTP Login');
+    });
+
+    session(['otp_user' => $user->id]);
+
+    return redirect('/otp');
+}
+
+public function showOtp()
+{
+    return view('auth.otp');
+}
+
+public function verifyOtp(Request $request)
+{
+    $user = User::find(session('otp_user'));
+
+    if ($user->otp == $request->otp && now()->lt($user->otp_expires_at)) {
+
+        auth()->login($user);
+
+        return redirect('/products');
+    }
+
+    return back()->with('error', 'Invalid or Expired OTP');
+}
+```
+
+---
+
+# 3. CART CONTROLLER
+
+ `CartController.php`
+
+```php
+use App\Models\Cart;
+
+public function add($id)
+{
+    $cart = Cart::firstOrCreate([
+        'user_id' => auth()->id(),
+        'product_id' => $id
+    ]);
+
+    $cart->increment('quantity');
+
+    return response()->json(['success' => true]);
+}
+
+public function index()
+{
+    $cartItems = Cart::with('product')
+        ->where('user_id', auth()->id())
+        ->get();
+
+    return view('cart', compact('cartItems'));
+}
+
+public function remove($id)
+{
+    Cart::find($id)->delete();
+    return back();
+}
+```
+
+---
+
+# CART PAGE
+
+ `resources/views/cart.blade.php`
+
+```html
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container">
+
+<h3>My Cart</h3>
+
+@foreach($cartItems as $item)
+<div class="card p-3 mb-2 d-flex flex-row justify-content-between">
+
+    <div>
+        <h5>{{ $item->product->name }}</h5>
+        <p>₹{{ $item->product->price }}</p>
+    </div>
+
+    <div>
+        Qty: {{ $item->quantity }}
+        <br>
+        <a href="/cart/remove/{{ $item->id }}" class="btn btn-danger btn-sm">Remove</a>
+    </div>
+
+</div>
+@endforeach
+
+<a href="/checkout" class="btn btn-success">Checkout</a>
+
+</div>
+
+@endsection
+```
+
+---
+
+# 4. CHECKOUT + ADDRESS
+
+`CheckoutController.php`
+
+```php
+use App\Models\Address;
+use App\Models\Cart;
+use App\Models\Order;
+use App\Models\OrderItem;
+
+public function index()
+{
+    $addresses = Address::where('user_id', auth()->id())->get();
+
+    $cartItems = Cart::with('product')
+        ->where('user_id', auth()->id())
+        ->get();
+
+    return view('checkout', compact('addresses', 'cartItems'));
+}
+
+public function saveAddress(Request $request)
+{
+    Address::create([
+        'user_id' => auth()->id(),
+        'name' => $request->name,
+        'mobile' => $request->mobile,
+        'address' => $request->address,
+        'city' => $request->city,
+        'state' => $request->state,
+        'pincode' => $request->pincode
+    ]);
+
+    return back();
+}
+```
+
+---
+
+#  CHECKOUT PAGE
+
+ `checkout.blade.php`
+
+```html
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container">
+
+<h3>Checkout</h3>
+
+<form method="POST" action="/place-order">
+@csrf
+
+<h5>Select Address</h5>
+
+@foreach($addresses as $addr)
+<input type="radio" name="address_id" value="{{ $addr->id }}">
+{{ $addr->address }} <br>
+@endforeach
+
+<hr>
+
+<h5>Add New Address</h5>
+
+<input name="name" placeholder="Name"><br>
+<input name="mobile" placeholder="Mobile"><br>
+<input name="address" placeholder="Address"><br>
+<input name="city" placeholder="City"><br>
+<input name="state" placeholder="State"><br>
+<input name="pincode" placeholder="Pincode"><br>
+
+<button formaction="/save-address">Save Address</button>
+
+<hr>
+
+<h5>Cart Items</h5>
+
+@foreach($cartItems as $item)
+<p>{{ $item->product->name }} - ₹{{ $item->product->price }}</p>
+@endforeach
+
+<button class="btn btn-success">Place Order</button>
+
+</form>
+
+</div>
+
+@endsection
+```
+
+---
+
+#  5. PLACE ORDER
+
+```php
+public function placeOrder(Request $request)
+{
+    $cartItems = Cart::where('user_id', auth()->id())->get();
+
+    $total = 0;
+
+    foreach ($cartItems as $item) {
+        $total += $item->product->price * $item->quantity;
+    }
+
+    $order = Order::create([
+        'user_id' => auth()->id(),
+        'address_id' => $request->address_id,
+        'total_amount' => $total
+    ]);
+
+    foreach ($cartItems as $item) {
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $item->product_id,
+            'quantity' => $item->quantity,
+            'price' => $item->product->price
+        ]);
+
+        $item->product->decrement('stock', $item->quantity);
+    }
+
+    Cart::where('user_id', auth()->id())->delete();
+
+    return redirect('/my-orders');
+}
+```
+
+---
+
+# 6. MY ORDERS
+
+ `OrderController.php`
+
+```php
+use App\Models\Order;
+
+public function index()
+{
+    $orders = Order::where('user_id', auth()->id())->get();
+
+    return view('orders', compact('orders'));
+}
+```
+
+---
+
+# ORDERS PAGE
+
+```html
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container">
+
+<h3>My Orders</h3>
+
+@foreach($orders as $order)
+<div class="card p-3 mb-2">
+
+    Order #{{ $order->id }} <br>
+    Total: ₹{{ $order->total_amount }}
+
+</div>
+@endforeach
+
+</div>
+
+@endsection
+```
+
+---
+
+#  7. ROLE (ADMIN / USER)
+
+ Add column:
+
+```php
+$table->string('role')->default('user');
+```
+
+---
+
+Middleware:
+
+```php
+public function handle($request, Closure $next)
+{
+    if (auth()->user()->role != 'admin') {
+        abort(403);
+    }
+
+    return $next($request);
+}
+```
+
+---
+
+
+
+
+
+
+
+checkout modify 
+
+@extends('layouts.app')
+
+@section('content')
+
+<div class="container mt-4">
+
+<div class="row">
+
+<!-- LEFT: ADDRESS -->
+<div class="col-md-7">
+
+<h4>Select Address</h4>
+
+<form method="POST" action="/place-order">
+@csrf
+
+@foreach($addresses as $addr)
+<div class="card p-3 mb-2">
+
+    <input type="radio" name="address_id" value="{{ $addr->id }}" required>
+
+    <strong>{{ $addr->name }}</strong><br>
+    {{ $addr->address }}<br>
+    {{ $addr->city }} - {{ $addr->pincode }}
+
+</div>
+@endforeach
+
+<hr>
+
+<h5>Add New Address</h5>
+
+<input name="name" class="form-control mb-2" placeholder="Name">
+<input name="mobile" class="form-control mb-2" placeholder="Mobile">
+<textarea name="address" class="form-control mb-2" placeholder="Address"></textarea>
+<input name="city" class="form-control mb-2" placeholder="City">
+<input name="state" class="form-control mb-2" placeholder="State">
+<input name="pincode" class="form-control mb-2" placeholder="Pincode">
+
+<button formaction="/save-address" class="btn btn-secondary mb-3">
+    Save Address
+</button>
+
+</div>
+
+<!-- RIGHT: ORDER SUMMARY -->
+<div class="col-md-5">
+
+<div class="card p-3">
+
+<h5>Order Summary</h5>
+
+@php $total = 0; @endphp
+
+@foreach($cartItems as $item)
+
+@php 
+$total += $item->product->price * $item->quantity; 
+@endphp
+
+<div class="d-flex justify-content-between">
+    <span>{{ $item->product->name }}</span>
+    <span>₹{{ $item->product->price }}</span>
+</div>
+
+@endforeach
+
+<hr>
+
+<h5>Total: ₹{{ $total }}</h5>
+
+<button class="btn btn-success w-100">
+    Place Order
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+@endsection
+
+
+
+
+
+
+
+
+
+cart modify  
+
+
+<h3>My Cart</h3>
+
+@php $total = 0; @endphp
+
+@foreach($cartItems as $item)
+
+@php 
+$total += $item->product->price * $item->quantity; 
+@endphp
+
+<div class="card p-3 mb-2 d-flex justify-content-between">
+
+    <div>
+        <h6>{{ $item->product->name }}</h6>
+        <p>₹{{ $item->product->price }}</p>
+    </div>
+
+    <div>
+        Qty: {{ $item->quantity }}
+        <br>
+        <a href="/cart/remove/{{ $item->id }}" class="btn btn-danger btn-sm">Remove</a>
+    </div>
+
+</div>
+
+@endforeach
+
+<h4>Total: ₹{{ $total }}</h4>
+
+<a href="/checkout" class="btn btn-success">
+    Proceed to Checkout
+</a>
+
+
+
+
+
+
+
+
+
+FIX (MAKE ADDRESS CARD SELECTABLE)
+
+Replace address block:
+
+<div class="card p-3 mb-2 address-box">
+
+    <input type="radio" name="address_id" value="{{ $addr->id }}" required>
+
+    <strong>{{ $addr->name }}</strong><br>
+    {{ $addr->address }}<br>
+    {{ $addr->city }} - {{ $addr->pincode }}
+
+</div>
+
+
+
+<style>
+.address-box {
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.address-box
+
+
+
+
+
+
+
+
+
+
+
+CART COUNT NOT LIVE
+
+ Add ID in navbar:
+
+Cart (<span id="cart-count">{{ $cartCount }}</span>)
+
+ Update JS:
+
+success: function () {
+    Swal.fire('Added!', '', 'success');
+
+    let count = parseInt($('#cart-count').text());
+    $('#cart-count').text(count + 1);
+}
+
+
+
+
+
+
+CATEGORY SIDEBAR (IMPORTANT)
+<div class="row">
+
+<div class="col-md-3">
+    <div class="card p-3">
+        <h5>Categories</h5>
+
+        @foreach($categories as $cat)
+            <a href="/products?category_id={{ $cat->id }}">
+                {{ $cat->name }}
+            </a><br>
+        @endforeach
+    </div>
+</div>
+
+
+5. PRODUCT DETAILS PAGE (MUST HAVE)
+
+You already added route — just make UI better:
+
+<div class="container mt-5">
+
+<div class="row">
+
+<div class="col-md-5">
+    <img src="{{ asset('storage/'.$product->image) }}" class="img-fluid">
+</div>
+
+<div class="col-md-7">
+    <h3>{{ $product->name }}</h3>
+
+    <h4 class="text-success">₹{{ $product->price }}</h4>
+
+    <p>{{ $product->long_description }}</p>
+
+    <button class="btn btn-warning">Add to Cart</button>
+</div>
+
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+P FINAL FEATURES YOU WANT
+
+We’ll complete:
+
+OTP Login
+Cart + Cart Count
+Checkout + Address
+Orders
+Product Search
+Category Filter (Main → Sub)
+Navbar Categories
+Product Details Page
+Stock Radio Button
+
+---
+
+#  1. OTP LOGIN (FINAL)
+
+ `users` table add:
+
+```php
+$table->string('otp')->nullable();
+$table->timestamp('otp_expires_at')->nullable();
+```
+
+---
+
+ `AuthController.php`
+
+```php
+public function login(Request $request)
+{
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return back()->with('error', 'Invalid');
+    }
+
+    $otp = rand(100000, 999999);
+
+    $user->update([
+        'otp' => $otp,
+        'otp_expires_at' => now()->addMinute()
+    ]);
+
+    Mail::to($user->email)->send(new SendOtpMail($otp));
+
+    session(['otp_user' => $user->id]);
+
+    return redirect('/otp');
+}
+```
+
+---
+
+# 2. CART + CART COUNT
+
+---
+
+##  Cart Model Relation
+
+```php
+public function product()
+{
+    return $this->belongsTo(Product::class);
+}
+```
+
+---
+
+##  CartController
+
+```php
+public function add($id)
+{
+    $cart = Cart::firstOrCreate([
+        'user_id' => auth()->id(),
+        'product_id' => $id
+    ]);
+
+    $cart->increment('quantity');
+
+    return response()->json(['success' => true]);
+}
+```
+
+---
+
+## CART COUNT (GLOBAL)
+
+ `AppServiceProvider.php`
+
+```php
+use App\Models\Cart;
+
+View::composer('*', function ($view) {
+    if(auth()->check()){
+        $count = Cart::where('user_id', auth()->id())->count();
+        $view->with('cartCount', $count);
+    }
+});
+```
+
+---
+
+ Navbar:
+
+```html
+Cart ({{ $cartCount ?? 0 }})
+```
+
+---
+
+#  3. PRODUCT SEARCH (FIX)
+
+ Controller:
+
+```php
+public function userProducts(Request $request)
+{
+    $products = Product::when($request->search, function ($q) use ($request) {
+        $q->where('name', 'like', '%' . $request->search . '%');
+    })->get();
+
+    return view('user.products', compact('products'));
+}
+```
+
+---
+
+Blade:
+
+```html
+<form method="GET">
+    <input type="text" name="search" placeholder="Search...">
+</form>
+```
+
+---
+
+#  4. CATEGORY FILTER (MAIN → SUB)
+
+```php
+$products = Product::when($request->category_id, function ($q) use ($request) {
+
+    $categoryIds = Category::where('id', $request->category_id)
+        ->orWhere('parent_id', $request->category_id)
+        ->pluck('id');
+
+    $q->whereIn('category_id', $categoryIds);
+})->get();
+```
+
+---
+
+#  5. NAVBAR CATEGORY (MAIN + SUB)
+
+```html
+<ul class="navbar-nav">
+
+@foreach($categories as $cat)
+<li class="nav-item dropdown">
+
+    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+        {{ $cat->name }}
+    </a>
+
+    <ul class="dropdown-menu">
+
+        @foreach($cat->children as $sub)
+        <li>
+            <a href="/products?category_id={{ $sub->id }}">
+                {{ $sub->name }}
+            </a>
+        </li>
+        @endforeach
+
+    </ul>
+
+</li>
+@endforeach
+
+</ul>
+```
+
+---
+
+#  6. CHECKOUT + ADDRESS
+
+---
+
+##  Address Table
+
+```php
+$table->string('name');
+$table->string('mobile');
+$table->text('address');
+$table->string('city');
+$table->string('state');
+$table->string('pincode');
+```
+
+---
+
+##  CheckoutController
+
+```php
+public function index()
+{
+    $addresses = Address::where('user_id', auth()->id())->get();
+    $cartItems = Cart::with('product')->where('user_id', auth()->id())->get();
+
+    return view('checkout', compact('addresses', 'cartItems'));
+}
+```
+
+---
+
+# ADDRESS RADIO BUTTON
+
+```html
+@foreach($addresses as $address)
+<input type="radio" name="address_id" value="{{ $address->id }}">
+{{ $address->address }}
+@endforeach
+```
+
+---
+
+#  7. ORDER PLACEMENT
+
+```php
+public function placeOrder(Request $request)
+{
+    $cartItems = Cart::where('user_id', auth()->id())->get();
+
+    $total = 0;
+
+    foreach ($cartItems as $item) {
+        $total += $item->product->price * $item->quantity;
+    }
+
+    $order = Order::create([
+        'user_id' => auth()->id(),
+        'total_amount' => $total,
+        'address_id' => $request->address_id
+    ]);
+
+    foreach ($cartItems as $item) {
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $item->product_id,
+            'quantity' => $item->quantity,
+            'price' => $item->product->price
+        ]);
+
+        $item->product->decrement('stock', $item->quantity);
+    }
+
+    Cart::where('user_id', auth()->id())->delete();
+
+    return redirect('/my-orders');
+}
+```
+
+---
+
+#  8. PRODUCT DETAILS PAGE 
+
+---
+
+##  Route
+
+```php
+Route::get('/product/{id}', [ProductController::class, 'details']);
+```
+
+---
+
+##  Controller
+
+```php
+public function details($id)
+{
+    $product = Product::findOrFail($id);
+
+    return view('user.product-details', compact('product'));
+}
+```
+
+---
+
+##  Blade
+
+```html
+<h2>{{ $product->name }}</h2>
+
+<img src="{{ asset('storage/'.$product->image) }}" width="300">
+
+<p>{{ $product->long_description }}</p>
+
+<h3>₹{{ $product->price }}</h3>
+```
+
+---
+
+## CLICK FROM LIST
+
+```html
+<a href="/product/{{ $product->id }}">
+    <img ...>
+    <h5>{{ $product->name }}</h5>
+</a>
+```
+
+---
+
+#  9. STOCK RADIO BUTTON
+
+```html
+@if($product->stock > 0)
+    <input type="radio" checked> In Stock
+@else
+    <input type="radio" disabled> Out of Stock
+@endif
+```
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You want:
+
+```
+Main Category
+   ├── Sub Category
+   │     ├── Sub Sub Category
+   │           ├── Sub Level 3
+```
+
+
+
+---
+
+#  STEP 1: CATEGORY RELATION (IMPORTANT)
+
+ `Category.php`
+
+```php id="9m3j5x"
+public function children()
+{
+    return $this->hasMany(Category::class, 'parent_id');
+}
+```
+
+---
+
+# STEP 2: FETCH ONLY MAIN CATEGORIES
+
+Controller
+
+```php id="7rm2d2"
+$categories = Category::whereNull('parent_id')
+    ->with('children.children') // load nested
+    ->get();
+```
+
+---
+
+#  STEP 3: RECURSIVE BLADE (KEY PART)
+ `resources/views/components/category-tree.blade.php`
+
+```html id="l6zk0o"
+<ul class="list-group ms-3">
+
+@foreach($categories as $category)
+<li class="list-group-item">
+
+    <!-- Clickable Toggle -->
+    <span class="toggle-category" style="cursor:pointer;">
+        ▶ {{ $category->name }}
+    </span>
+
+    <!-- Children -->
+    @if($category->children->count())
+        <div class="nested d-none">
+            @include('components.category-tree', ['categories' => $category->children])
+        </div>
+    @endif
+
+</li>
+@endforeach
+
+</ul>
+```
+
+---
+
+#  STEP 4: USE IT IN PAGE
+
+`admin/categories.blade.php` OR `user sidebar`
+
+```html id="q7x9is"
+<h5>Categories</h5>
+
+@include('components.category-tree', ['categories' => $categories])
+```
+
+---
+
+#  STEP 5: ADD TOGGLE (EXPAND / COLLAPSE)
+
+```html id="m1fxlq"
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('.toggle-category').forEach(function (item) {
+
+        item.addEventListener('click', function () {
+
+            let next = this.nextElementSibling;
+
+            if (next) {
+                next.classList.toggle('d-none');
+            }
+
+        });
+
+    });
+
+});
+</script>
+```
+
+---
+
+# STEP 6: IMPROVE UI (OPTIONAL BUT NICE)
+
+```html id="2n0kkv"
+<style>
+.list-group-item {
+    border: none;
+    padding: 5px;
+}
+
+.toggle-category:hover {
+    color: blue;
+    font-weight: bold;
+}
+</style>
+```
+
+---
+
+#  FINAL RESULT
+
+Now your category looks like:
+
+```
+▶ Electronics
+    ▶ Mobiles
+        ▶ Android
+        ▶ iPhone
+    ▶ Laptops
+▶ Fashion
+    ▶ Men
+    ▶ Women
+```
+
+
+
+---
+
+# BONUS: FILTER PRODUCTS ON CLICK
+
+Update category name:
+
+```html id="64r4nd"
+<a href="/products?category_id={{ $category->id }}">
+    {{ $category->name }}
+</a>
+```
+
+---
+
+
+
+
