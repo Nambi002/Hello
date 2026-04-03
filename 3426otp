@@ -1,0 +1,297 @@
+Got it. Here is a **clean, complete implementation ONLY for:**
+
+* OTP Login
+* Forgot Password (OTP-based reset)
+
+No extra modules.
+
+---
+
+# STEP 1: DATABASE (Users Table)
+
+Add these columns:
+
+```php
+$table->string('otp')->nullable();
+$table->timestamp('otp_expires_at')->nullable();
+```
+
+Run migration.
+
+---
+
+# STEP 2: ROUTES
+
+📄 `routes/web.php`
+
+```php
+use App\Http\Controllers\AuthController;
+
+/* LOGIN WITH OTP */
+Route::get('/login', [AuthController::class, 'showLogin']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::get('/otp', [AuthController::class, 'showOtp']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+
+/* FORGOT PASSWORD */
+Route::get('/forgot-password', [AuthController::class, 'forgotForm']);
+Route::post('/send-otp', [AuthController::class, 'sendOtp']);
+Route::get('/reset-password', [AuthController::class, 'resetForm']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+```
+
+---
+
+# STEP 3: CONTROLLER
+
+📄 `app/Http/Controllers/AuthController.php`
+
+```php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+
+class AuthController extends Controller
+{
+    /* ================= LOGIN ================= */
+
+    public function showLogin()
+    {
+        return view('auth.login');
+    }
+
+    public function login(Request $request)
+    {
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return back()->with('error', 'Invalid credentials');
+        }
+
+        $otp = rand(100000, 999999);
+
+        $user->update([
+            'otp' => $otp,
+            'otp_expires_at' => now()->addMinute()
+        ]);
+
+        Mail::raw("Your Login OTP is: $otp", function ($msg) use ($user) {
+            $msg->to($user->email)->subject('Login OTP');
+        });
+
+        session(['otp_user' => $user->id]);
+
+        return redirect('/otp');
+    }
+
+    public function showOtp()
+    {
+        return view('auth.otp');
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $user = User::find(session('otp_user'));
+
+        if (!$user) {
+            return redirect('/login');
+        }
+
+        if ($user->otp == $request->otp && now()->lt($user->otp_expires_at)) {
+            auth()->login($user);
+
+            $user->update([
+                'otp' => null
+            ]);
+
+            return redirect('/products');
+        }
+
+        return back()->with('error', 'Invalid or expired OTP');
+    }
+
+    /* ================= FORGOT PASSWORD ================= */
+
+    public function forgotForm()
+    {
+        return view('auth.forgot');
+    }
+
+    public function sendOtp(Request $request)
+    {
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return back()->with('error', 'Email not found');
+        }
+
+        $otp = rand(100000, 999999);
+
+        $user->update([
+            'otp' => $otp,
+            'otp_expires_at' => now()->addMinute()
+        ]);
+
+        Mail::raw("Your Reset OTP is: $otp", function ($msg) use ($user) {
+            $msg->to($user->email)->subject('Reset Password OTP');
+        });
+
+        session(['reset_user' => $user->id]);
+
+        return redirect('/reset-password');
+    }
+
+    public function resetForm()
+    {
+        return view('auth.reset');
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $user = User::find(session('reset_user'));
+
+        if (!$user) {
+            return redirect('/login');
+        }
+
+        if ($user->otp != $request->otp || now()->gt($user->otp_expires_at)) {
+            return back()->with('error', 'Invalid or expired OTP');
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+            'otp' => null
+        ]);
+
+        return redirect('/login')->with('success', 'Password reset successful');
+    }
+}
+```
+
+---
+
+# STEP 4: LOGIN PAGE
+
+📄 `resources/views/auth/login.blade.php`
+
+```html
+<form method="POST" action="/login">
+@csrf
+
+<input type="email" name="email" placeholder="Email" required>
+<input type="password" name="password" placeholder="Password" required>
+
+<button>Login</button>
+
+<a href="/forgot-password">Forgot Password?</a>
+
+</form>
+```
+
+---
+
+# STEP 5: OTP PAGE
+
+📄 `auth/otp.blade.php`
+
+```html
+<form method="POST" action="/verify-otp">
+@csrf
+
+<input type="text" name="otp" placeholder="Enter OTP" required>
+
+<button>Verify OTP</button>
+
+</form>
+```
+
+---
+
+# STEP 6: FORGOT PASSWORD PAGE
+
+📄 `auth/forgot.blade.php`
+
+```html
+<form method="POST" action="/send-otp">
+@csrf
+
+<input type="email" name="email" placeholder="Enter Email" required>
+
+<button>Send OTP</button>
+
+</form>
+```
+
+---
+
+# STEP 7: RESET PASSWORD PAGE
+
+📄 `auth/reset.blade.php`
+
+```html
+<form method="POST" action="/reset-password">
+@csrf
+
+<input type="text" name="otp" placeholder="Enter OTP" required>
+
+<input type="password" name="password" placeholder="New Password" required>
+
+<button>Reset Password</button>
+
+</form>
+```
+
+---
+
+# STEP 8: MAILTRAP CONFIG
+
+📄 `.env`
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+MAIL_ENCRYPTION=null
+```
+
+---
+
+# FINAL FLOW
+
+## LOGIN WITH OTP
+
+1. Enter email + password
+2. OTP sent to Mailtrap
+3. Enter OTP
+4. Login success
+
+---
+
+## FORGOT PASSWORD
+
+1. Enter email
+2. OTP sent
+3. Enter OTP + new password
+4. Password updated
+
+---
+
+# DONE
+
+This is a **complete working OTP + Forgot Password system**.
+
+---
+
+If you want next:
+
+* resend OTP
+* countdown timer
+* styled UI (Bootstrap)
+* Gmail instead of Mailtrap
+
+tell me.
