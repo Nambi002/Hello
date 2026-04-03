@@ -215,3 +215,469 @@ If you want next feature:
 * profile dropdown in navbar
 
 tell me.
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------
+
+
+
+Good. Now let’s implement a **clean Role System (Admin / User)** properly.
+
+This will ensure:
+
+* Admin can access admin panel
+* User cannot access admin routes
+* Role-based login control
+* Secure middleware protection
+
+---
+
+# STEP 1: ADD ROLE COLUMN
+
+If not added:
+
+```bash
+php artisan make:migration add_role_to_users_table
+```
+
+```php
+public function up()
+{
+    Schema::table('users', function (Blueprint $table) {
+        $table->string('role')->default('user');
+    });
+}
+```
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+# STEP 2: SET ADMIN USER
+
+Manually make one user admin (via DB or tinker):
+
+```bash
+php artisan tinker
+```
+
+```php
+$user = App\Models\User::find(1);
+$user->role = 'admin';
+$user->save();
+```
+
+---
+
+# STEP 3: CREATE MIDDLEWARE
+
+```bash
+php artisan make:middleware AdminMiddleware
+php artisan make:middleware UserMiddleware
+```
+
+---
+
+# STEP 4: ADMIN MIDDLEWARE
+
+📄 `app/Http/Middleware/AdminMiddleware.php`
+
+```php
+public function handle($request, Closure $next)
+{
+    if (!auth()->check() || auth()->user()->role != 'admin') {
+        abort(403);
+    }
+
+    return $next($request);
+}
+```
+
+---
+
+# STEP 5: USER MIDDLEWARE
+
+📄 `UserMiddleware.php`
+
+```php
+public function handle($request, Closure $next)
+{
+    if (!auth()->check() || auth()->user()->role != 'user') {
+        abort(403);
+    }
+
+    return $next($request);
+}
+```
+
+---
+
+# STEP 6: REGISTER MIDDLEWARE
+
+📄 `app/Http/Kernel.php`
+
+```php
+protected $routeMiddleware = [
+    'admin' => \App\Http\Middleware\AdminMiddleware::class,
+    'user' => \App\Http\Middleware\UserMiddleware::class,
+];
+```
+
+---
+
+# STEP 7: PROTECT ROUTES
+
+📄 `web.php`
+
+---
+
+## Admin Routes
+
+```php
+Route::middleware(['admin'])->group(function () {
+
+    Route::get('/admin/dashboard', function () {
+        return view('admin.dashboard');
+    });
+
+    Route::get('/admin/products', ...);
+    Route::get('/admin/categories', ...);
+
+});
+```
+
+---
+
+## User Routes
+
+```php
+Route::middleware(['user'])->group(function () {
+
+    Route::get('/products', ...);
+    Route::get('/cart', ...);
+    Route::get('/checkout', ...);
+    Route::get('/profile', ...);
+
+});
+```
+
+---
+
+# STEP 8: LOGIN REDIRECTION (IMPORTANT)
+
+📄 `AuthController.php`
+
+Update after OTP verification:
+
+```php
+if ($user->role == 'admin') {
+    return redirect('/admin/dashboard');
+} else {
+    return redirect('/products');
+}
+```
+
+---
+
+# STEP 9: UI CONTROL (BLADE)
+
+Hide admin links for users:
+
+```html
+@if(auth()->user()->role == 'admin')
+    <a href="/admin/dashboard">Admin Panel</a>
+@endif
+```
+
+---
+
+# STEP 10: SECURITY RULES
+
+Now your app enforces:
+
+* User cannot access `/admin/*`
+* Admin cannot access user-only routes (if restricted)
+* All routes require login
+
+---
+
+# FINAL RESULT
+
+| Role         | Access                                      |
+| ------------ | ------------------------------------------- |
+| Admin        | Full control (products, categories, orders) |
+| User         | Shopping only                               |
+| Unauthorized | Blocked (403)                               |
+
+---
+
+# OPTIONAL IMPROVEMENTS
+
+You can upgrade later:
+
+* Multiple roles (admin, manager, customer)
+* Permission system (CRUD-based)
+* Admin approval flow
+* Role dropdown in registration
+
+---
+
+# NEXT STEP
+
+If you want:
+
+* admin panel full UI
+* role-based sidebar
+* permission system (advanced)
+
+tell me.
+
+
+
+-----------------------------------
+
+
+Good requirement. You want **strict role session control**:
+
+> If Admin is logged in → User login should be blocked (even in another tab/browser)
+> If User is logged in → Admin login should be blocked
+
+This is **global session control per role**.
+
+---
+
+# 🧠 HOW WE SOLVE THIS
+
+We will:
+
+1. Track active session per role
+2. Store it in database
+3. Block login if another role is already active
+4. Clear session on logout
+
+---
+
+# STEP 1: ADD COLUMN IN USERS TABLE
+
+```bash
+php artisan make:migration add_session_control_to_users_table
+```
+
+```php
+public function up()
+{
+    Schema::table('users', function (Blueprint $table) {
+        $table->boolean('is_logged_in')->default(false);
+    });
+}
+```
+
+Run:
+
+```bash
+php artisan migrate
+```
+
+---
+
+# STEP 2: LOGIN LOGIC UPDATE
+
+📄 `AuthController.php`
+
+### 🔥 MODIFY LOGIN METHOD
+
+```php
+public function login(Request $request)
+{
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return back()->with('error', 'Invalid credentials');
+    }
+
+    // 🚨 CHECK IF OTHER ROLE IS ACTIVE
+    $otherRoleActive = User::where('role', '!=', $user->role)
+        ->where('is_logged_in', true)
+        ->exists();
+
+    if ($otherRoleActive) {
+        return back()->with('error', 'Another role already logged in. Logout first.');
+    }
+
+    // OTP GENERATE
+    $otp = rand(100000, 999999);
+
+    $user->update([
+        'otp' => $otp,
+        'otp_expires_at' => now()->addMinute()
+    ]);
+
+    Mail::raw("OTP: $otp", function ($msg) use ($user) {
+        $msg->to($user->email)->subject('OTP');
+    });
+
+    session(['otp_user' => $user->id]);
+
+    return redirect('/otp');
+}
+```
+
+---
+
+# STEP 3: AFTER OTP VERIFY → MARK LOGGED IN
+
+```php
+public function verifyOtp(Request $request)
+{
+    $user = User::find(session('otp_user'));
+
+    if ($user->otp == $request->otp && now()->lt($user->otp_expires_at)) {
+
+        auth()->login($user);
+
+        // ✅ MARK USER AS LOGGED IN
+        $user->update([
+            'is_logged_in' => true,
+            'otp' => null
+        ]);
+
+        if ($user->role == 'admin') {
+            return redirect('/admin/dashboard');
+        }
+
+        return redirect('/products');
+    }
+
+    return back()->with('error', 'Invalid OTP');
+}
+```
+
+---
+
+# STEP 4: LOGOUT (VERY IMPORTANT)
+
+```php
+public function logout()
+{
+    $user = auth()->user();
+
+    if ($user) {
+        $user->update([
+            'is_logged_in' => false
+        ]);
+    }
+
+    auth()->logout();
+
+    return redirect('/login');
+}
+```
+
+---
+
+# STEP 5: FORCE LOGOUT (OPTIONAL SAFETY)
+
+If browser closed without logout → problem
+
+Add middleware:
+
+```bash
+php artisan make:middleware CheckSession
+```
+
+```php
+public function handle($request, Closure $next)
+{
+    if (auth()->check()) {
+
+        $user = auth()->user()->fresh();
+
+        if (!$user->is_logged_in) {
+            auth()->logout();
+            return redirect('/login');
+        }
+    }
+
+    return $next($request);
+}
+```
+
+Register in Kernel:
+
+```php
+'check.session' => \App\Http\Middleware\CheckSession::class,
+```
+
+Apply:
+
+```php
+Route::middleware(['check.session'])->group(function () {
+    // protected routes
+});
+```
+
+---
+
+# FINAL BEHAVIOR
+
+| Scenario        | Result              |
+| --------------- | ------------------- |
+| Admin logged in | User login blocked  |
+| User logged in  | Admin login blocked |
+| Same role login | Allowed             |
+| Logout          | Frees system        |
+
+---
+
+# IMPORTANT NOTES
+
+* This is **global lock (one role at a time)**
+* Works across tabs and browsers
+* Simple and effective
+
+---
+
+# OPTIONAL UPGRADE
+
+If you want more control:
+
+* allow multiple users but block only admin
+* single session per user
+* auto logout inactive users
+
+---
+
+# DONE
+
+You now have:
+
+* Role-based login restriction
+* Session locking
+* Secure login control
+
+---
+
+If you want next:
+
+* admin approval system
+* login history tracking
+* dashboard analytics
+
+tell me.
+
+
+-----------------------------------------
